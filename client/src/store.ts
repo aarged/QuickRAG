@@ -49,6 +49,12 @@ interface AppState {
   lastRetrievedChunks: RetrievedChunk[];
   setLastRetrievedChunks: (chunks: RetrievedChunk[]) => void;
   
+  // Panel State
+  isConfigOpen: boolean;
+  toggleConfig: () => void;
+  isDebugOpen: boolean;
+  toggleDebug: () => void;
+  
   // Stats
   sessionInputTokens: number;
   sessionOutputTokens: number;
@@ -89,6 +95,11 @@ export const useAppStore = create<AppState>((set) => ({
   
   lastRetrievedChunks: [],
   setLastRetrievedChunks: (lastRetrievedChunks) => set({ lastRetrievedChunks }),
+  
+  isConfigOpen: true,
+  toggleConfig: () => set((state) => ({ isConfigOpen: !state.isConfigOpen })),
+  isDebugOpen: true,
+  toggleDebug: () => set((state) => ({ isDebugOpen: !state.isDebugOpen })),
   
   sessionInputTokens: 0,
   sessionOutputTokens: 0,

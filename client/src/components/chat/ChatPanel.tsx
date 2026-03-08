@@ -3,11 +3,11 @@ import { useAppStore } from "@/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Trash2, Bot, User } from "lucide-react";
+import { Send, Trash2, Bot, User, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export function ChatPanel() {
-  const { messages, addMessage, clearChat, isGenerating, setIsGenerating } = useAppStore();
+  const { messages, addMessage, clearChat, isGenerating, setIsGenerating, isConfigOpen, toggleConfig, isDebugOpen, toggleDebug } = useAppStore();
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -54,13 +54,21 @@ export function ChatPanel() {
   return (
     <div className="flex flex-col h-full bg-card relative">
       <div className="flex items-center justify-between p-4 border-b">
-        <div>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={toggleConfig} title="Toggle Configuration Panel">
+            {isConfigOpen ? <PanelLeftClose className="w-5 h-5 text-muted-foreground" /> : <PanelLeftOpen className="w-5 h-5 text-muted-foreground" />}
+          </Button>
           <h2 className="text-lg font-semibold tracking-tight">QuickRag</h2>
         </div>
-        <Button variant="ghost" size="sm" onClick={clearChat} title="Clear Chat" className="text-muted-foreground hover:text-foreground">
-          <Trash2 className="w-4 h-4 mr-2" />
-          Clear
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={clearChat} title="Clear Chat" className="text-muted-foreground hover:text-foreground">
+            <Trash2 className="w-4 h-4 mr-2" />
+            Clear
+          </Button>
+          <Button variant="ghost" size="icon" onClick={toggleDebug} title="Toggle Debug Panel">
+            {isDebugOpen ? <PanelRightClose className="w-5 h-5 text-muted-foreground" /> : <PanelRightOpen className="w-5 h-5 text-muted-foreground" />}
+          </Button>
+        </div>
       </div>
       
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>

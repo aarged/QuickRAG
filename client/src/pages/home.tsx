@@ -1,12 +1,13 @@
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { ControlsPanel } from "@/components/chat/ControlsPanel";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { DebugPanel } from "@/components/chat/DebugPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAppStore } from "@/store";
 
 export default function Home() {
   const isMobile = useIsMobile();
+  const { isConfigOpen, isDebugOpen } = useAppStore();
 
   if (isMobile) {
     return (
@@ -39,23 +40,23 @@ export default function Home() {
   // Desktop Layout
   return (
     <div className="h-screen h-[100dvh] w-full bg-background flex flex-col overflow-hidden">
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
-        <ResizablePanel defaultSize={22} minSize={15} maxSize={30} className="bg-secondary/10">
-          <ControlsPanel />
-        </ResizablePanel>
+      <div className="flex-1 flex overflow-hidden">
+        {isConfigOpen && (
+          <div className="w-[350px] shrink-0 bg-secondary/10 transition-all duration-300">
+            <ControlsPanel />
+          </div>
+        )}
         
-        <ResizableHandle withHandle className="bg-border/60 hover:bg-primary/50 transition-colors" />
-        
-        <ResizablePanel defaultSize={50} minSize={30}>
+        <div className="flex-1 min-w-0">
           <ChatPanel />
-        </ResizablePanel>
+        </div>
         
-        <ResizableHandle withHandle className="bg-border/60 hover:bg-primary/50 transition-colors" />
-        
-        <ResizablePanel defaultSize={28} minSize={20} maxSize={40} className="bg-secondary/10">
-          <DebugPanel />
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        {isDebugOpen && (
+          <div className="w-[350px] shrink-0 bg-secondary/10 transition-all duration-300">
+            <DebugPanel />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
