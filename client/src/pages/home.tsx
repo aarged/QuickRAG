@@ -40,22 +40,30 @@ export default function Home() {
   // Desktop Layout
   return (
     <div className="h-screen h-[100dvh] w-full bg-background flex flex-col overflow-hidden">
-      <div className="flex-1 flex overflow-hidden">
-        {isConfigOpen && (
-          <div className="w-[350px] shrink-0 bg-secondary/10 transition-all duration-300">
+      <div className="flex-1 flex overflow-hidden relative">
+        <div 
+          className={`shrink-0 transition-[width] duration-300 ease-in-out relative z-0 ${
+            isConfigOpen ? "w-[350px]" : "w-0"
+          }`}
+        >
+          <div className="absolute top-0 right-0 w-[350px] h-full border-r border-border/50 overflow-hidden bg-background">
             <ControlsPanel />
           </div>
-        )}
+        </div>
         
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 relative z-10 bg-card shadow-sm border-x border-transparent">
           <ChatPanel />
         </div>
         
-        {isDebugOpen && (
-          <div className="w-[350px] shrink-0 bg-secondary/10 transition-all duration-300">
+        <div 
+          className={`shrink-0 transition-[width] duration-300 ease-in-out relative z-0 ${
+            isDebugOpen ? "w-[350px]" : "w-0"
+          }`}
+        >
+          <div className="absolute top-0 left-0 w-[350px] h-full border-l border-border/50 overflow-hidden bg-background">
             <DebugPanel />
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

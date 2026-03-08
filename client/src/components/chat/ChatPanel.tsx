@@ -53,19 +53,19 @@ export function ChatPanel() {
 
   return (
     <div className="flex flex-col h-full bg-card relative">
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="h-14 flex items-center justify-between px-4 border-b bg-background/50 shrink-0">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={toggleConfig} title="Toggle Configuration Panel">
+          <Button variant="ghost" size="icon" onClick={toggleConfig} title="Toggle Configuration Panel" className="h-8 w-8 shrink-0">
             {isConfigOpen ? <PanelLeftClose className="w-5 h-5 text-muted-foreground" /> : <PanelLeftOpen className="w-5 h-5 text-muted-foreground" />}
           </Button>
           <h2 className="text-lg font-semibold tracking-tight">QuickRag</h2>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={clearChat} title="Clear Chat" className="text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="sm" onClick={clearChat} title="Clear Chat" className="h-8 text-muted-foreground hover:text-foreground">
             <Trash2 className="w-4 h-4 mr-2" />
             Clear
           </Button>
-          <Button variant="ghost" size="icon" onClick={toggleDebug} title="Toggle Debug Panel">
+          <Button variant="ghost" size="icon" onClick={toggleDebug} title="Toggle Debug Panel" className="h-8 w-8 shrink-0">
             {isDebugOpen ? <PanelRightClose className="w-5 h-5 text-muted-foreground" /> : <PanelRightOpen className="w-5 h-5 text-muted-foreground" />}
           </Button>
         </div>

@@ -26,10 +26,10 @@ export function DebugPanel() {
   ];
 
   return (
-    <div className="flex flex-col h-full bg-secondary/20 border-l border-border/50">
+    <div className="flex flex-col h-full bg-secondary/20">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full w-full">
-        <div className="p-3 border-b bg-background/50">
-          <TabsList className="grid w-full grid-cols-2 bg-secondary/50">
+        <div className="h-14 px-3 flex items-center border-b bg-background/50 shrink-0">
+          <TabsList className="grid w-full grid-cols-2 bg-secondary/50 h-9">
             <TabsTrigger value="context" className="text-xs data-[state=active]:bg-card">
               <Search className="w-3 h-3 mr-2" />
               Context
@@ -41,7 +41,7 @@ export function DebugPanel() {
           </TabsList>
         </div>
 
-        <TabsContent value="context" className="flex-1 m-0 data-[state=active]:flex flex-col h-[calc(100%-60px)]">
+        <TabsContent value="context" className="flex-1 m-0 data-[state=active]:flex flex-col h-[calc(100%-56px)]">
           <div className="p-3 bg-secondary/30 border-b border-border/30 flex justify-between items-center">
             <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
               <AlignLeft className="w-3.5 h-3.5" />
@@ -93,7 +93,7 @@ export function DebugPanel() {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="reasoning" className="flex-1 m-0 data-[state=active]:flex flex-col h-[calc(100%-60px)]">
+        <TabsContent value="reasoning" className="flex-1 m-0 data-[state=active]:flex flex-col h-[calc(100%-56px)]">
            <div className="p-3 bg-secondary/30 border-b border-border/30 flex justify-between items-center">
             <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
               <Activity className="w-3.5 h-3.5" />

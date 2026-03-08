@@ -51,8 +51,8 @@ export function ControlsPanel() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-secondary/30 border-r">
-      <div className="p-4 border-b bg-background/50">
+    <div className="flex flex-col h-full bg-secondary/30">
+      <div className="h-14 px-4 border-b bg-background/50 flex items-center shrink-0">
         <h2 className="text-sm font-semibold tracking-tight flex items-center gap-2">
           <Settings2 className="w-4 h-4" />
           Configuration
