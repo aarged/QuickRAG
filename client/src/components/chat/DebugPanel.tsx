@@ -31,7 +31,7 @@ export function DebugPanel() {
       <div className="h-14 px-4 border-b bg-background/50 flex items-center shrink-0">
         <h2 className="text-sm font-semibold tracking-tight flex items-center gap-2">
           <TerminalSquare className="w-4 h-4" />
-          System Output
+          Output
         </h2>
       </div>
 
@@ -163,7 +163,6 @@ export function DebugPanel() {
               <div className="bg-card border rounded-lg p-4 space-y-4 shadow-sm">
                 
                 <div>
-                  <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Configuration State</h4>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex flex-col border border-border/50 rounded p-2 bg-secondary/20">
                       <span className="text-[10px] text-muted-foreground mb-1">Source</span>
