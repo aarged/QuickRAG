@@ -64,7 +64,7 @@ export function ControlsPanel() {
           <div className="space-y-3">
             <Label className="font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-xs uppercase tracking-wider flex items-center gap-2 text-[#0048ad]">
               <Database className="w-3 h-3" />
-              Knowledge Source
+              Source
             </Label>
             
             <Select 
@@ -75,7 +75,7 @@ export function ControlsPanel() {
                 <SelectValue placeholder="Select source" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="War and Peace">War and Peace (Default)</SelectItem>
+                <SelectItem value="War and Peace">Leo Tolstoys War & Peace</SelectItem>
                 <SelectItem value="My Reference">My Reference</SelectItem>
               </SelectContent>
             </Select>
@@ -182,7 +182,7 @@ export function ControlsPanel() {
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="prompt" className="border-none">
                 <AccordionTrigger className="hover:no-underline py-2 rounded px-2 hover:bg-secondary/50 text-sm">
-                  <div className="flex items-center gap-2 text-[#0048ad] text-[12px]">
+                  <div className="flex items-center gap-2 text-[#0048ad]">
                     <UserSquare2 className="w-4 h-4 text-muted-foreground" />
                     SYSTEM PROMPT
                   </div>

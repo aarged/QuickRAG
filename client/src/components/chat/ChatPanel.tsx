@@ -58,7 +58,6 @@ export function ChatPanel() {
           <Button variant="ghost" size="icon" onClick={toggleConfig} title="Toggle Configuration Panel" className="h-8 w-8 shrink-0">
             {isConfigOpen ? <PanelLeftClose className="w-5 h-5 text-muted-foreground" /> : <PanelLeftOpen className="w-5 h-5 text-muted-foreground" />}
           </Button>
-          <h2 className="text-lg font-semibold tracking-tight">QuickRag</h2>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={clearChat} title="Clear Chat" className="h-8 text-muted-foreground hover:text-foreground">
