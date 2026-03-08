@@ -69,7 +69,6 @@ export function ChatPanel() {
           </Button>
         </div>
       </div>
-      
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         <div className="space-y-6 max-w-3xl mx-auto pb-4">
           {messages.map((msg) => (
@@ -123,7 +122,6 @@ export function ChatPanel() {
           )}
         </div>
       </ScrollArea>
-      
       <div className="p-4 bg-background border-t">
         <div className="max-w-3xl mx-auto relative flex items-center">
           <Input 
@@ -143,9 +141,7 @@ export function ChatPanel() {
           </Button>
         </div>
         <div className="text-center mt-2">
-          <p className="text-[10px] text-muted-foreground font-mono">
-            QuickRag Demo • OpenAI + ChromaDB Simulation
-          </p>
+          <p className="text-[10px] text-muted-foreground font-mono">True North Applied Technologies</p>
         </div>
       </div>
     </div>
