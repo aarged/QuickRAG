@@ -119,7 +119,7 @@ export function ControlsPanel() {
 
           {/* AI Controls */}
           <div className="space-y-4">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Label className="font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-xs uppercase tracking-wider flex items-center gap-2 text-[#0048ad]">
               <SlidersHorizontal className="w-3 h-3" />
               Response Controls
             </Label>
