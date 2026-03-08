@@ -1,0 +1,224 @@
+Build a lightweight web app called QuickRag.
+
+QuickRag must match my True North website style: light mode, minimalist, clean, modern, text-first, restrained and elegant. Use a white or soft off-white background, dark neutral text, subtle borders, and a restrained cobalt accent. Do not use dark mode. Do not use flashy gradients, dashboards, charts, oversized cards, or decorative UI clutter. Prioritise typography, whitespace, alignment, and simplicity.
+
+Purpose:
+QuickRag is a simple demonstration app showing how quickly and cheaply a usable RAG chatbot can be published using OpenAI and ChromaDB.
+
+Tech stack:
+- React + TypeScript
+- Vite
+- Tailwind CSS
+- Node.js + Express backend, or Replit-friendly server routes
+- ChromaDB
+- OpenAI API
+
+Core behaviour:
+- Built-in default knowledge source: War and Peace by Leo Tolstoy
+- Optional user-uploaded source: one document only, one per app instance
+- User can toggle between:
+  - War and Peace
+  - My Reference
+- If no uploaded file exists, My Reference is selectable but the AI will not have any context to reference
+- Uploading a new file replaces the previous uploaded reference
+- Support PDF upload first, but structure code so DOCX/TXT can be added later
+
+Chat features:
+- message history
+- chat input
+- send button
+- clear chat button
+- keyboard submit
+- streaming response if practical
+
+Controls:
+- Source selector:
+  - War and Peace (upsert into ChromaDB through Project Gutenberg https://www.gutenberg.org/cache/epub/2600/pg2600-images.html)
+  - My Reference
+- Grounding selector:
+  - Strict
+  - Creative
+- Voice selector (detailed prompts to follow):
+  - Standard
+  - Yoda
+  - Pirate
+  - Valley Girl
+  - Surfer Dude
+  - Snarky Comic
+- Style selector:
+  - Terse
+  - Standard
+  - Verbose
+
+Grounding rules:
+- Strict = answer from selected source material only
+- Creative = use selected source material first, but may also research the web if needed
+- If the user selects My Reference + Strict and has not uploaded a document, the assistant must respond with: “I have no information.”
+- If Strict mode is active and retrieved context does not support an answer, do not hallucinate; respond that the information is not available
+- If Creative mode uses information beyond the selected source, indicate that clearly in the debug panel
+
+Voice rules:
+- Voice affects tone only, not factual grounding
+
+Style rules:
+- Terse = short answer
+- Standard = normal answer
+- Verbose = fuller answer
+
+UI layout:
+Desktop:
+- Left panel: source selector, upload, grounding, voice, style, system prompt viewer
+- Centre: chat window and input controls
+- Right panel: tabs for Context Window and Reasoning Trace
+
+Mobile:
+- stack panels into tabs or accordions
+
+Debug/transparency requirements:
+Do not expose hidden raw chain-of-thought.
+Instead create two safe debug panels:
+
+1. Context Window
+Show:
+- retrieved chunks sent to the model
+- recent conversation history included in the request
+- source labels
+- token estimates if practical
+
+2. Reasoning Trace
+Show:
+- selected source
+- selected grounding mode
+- whether web research was used
+- top retrieved chunks
+- prompt assembly summary
+- memory included
+- token usage estimate
+- retrieval notes explaining chunk selection
+
+System prompt viewer:
+Add a collapsible panel showing the active system prompt.
+It must dynamically reflect:
+- selected source
+- selected grounding mode
+- selected voice
+- selected style
+- retrieval rules
+
+Clear chat behaviour:
+When Clear Chat is clicked:
+- clear visible chat history
+- clear context window
+- clear reasoning trace
+- preserve uploaded reference unless explicitly replaced
+- preserve selected source, grounding, voice, and style settings
+
+RAG requirements:
+Implement a simple RAG pipeline:
+1. load selected corpus
+2. chunk text sensibly
+3. generate embeddings with OpenAI
+4. store/query vectors in ChromaDB
+5. retrieve top relevant chunks
+6. assemble grounded prompt
+7. generate response
+
+Rules:
+- default corpus is War and Peace
+- responses should prefer retrieved context
+- if unsupported in Strict mode, say so
+- surface source excerpts in the Context Window
+- optionally show citation-style chunk references in the chat response
+
+Usage/token controls:
+Implement practical usage controls with a central config file.
+Include:
+- max upload size
+- max chunk count
+- max retrieved chunks
+- max conversation turns retained
+- max tokens sent to model
+- max output tokens
+- one uploaded file only
+
+Also show:
+- estimated input tokens
+- estimated output tokens
+- approximate session total
+- approximate cost if practical
+
+Suggested defaults:
+- rolling memory of last 6–8 turns
+- conservative chunk retrieval
+- trim or summarise older history
+- conservative output cap
+- prevent repeated embedding of the same file in one session
+
+API routes:
+Create routes such as:
+- POST /api/upload
+- POST /api/chat
+- POST /api/clear
+- GET /api/system-prompt
+- GET /api/session-state
+
+The chat route should return:
+- assistant reply
+- retrieved chunks
+- context payload
+- reasoning trace summary
+- token estimate metadata
+- whether web research was used
+
+Modes:
+The app must support:
+1. embedded website detail-page mode
+2. standalone full-page mode
+
+Implementation priorities:
+Phase 1:
+- light minimalist UI shell
+- War and Peace corpus
+- working chat with OpenAI + ChromaDB
+- source selector
+- grounding toggle
+- voice selector
+- style selector
+- system prompt panel
+- context and reasoning panels
+
+Phase 2:
+- PDF upload
+- uploaded reference replacement
+- strict fallback behaviour for missing upload
+- token estimates and usage limits
+
+Phase 3:
+- embedded mode
+- standalone mode
+- responsive polish
+- error handling
+
+Constraints:
+- keep it intentionally simple
+- no auth for v1
+- no multi-user tenancy
+- no billing system
+- no analytics dashboard
+- no unnecessary animations
+- focus on clarity, polish, and educational demonstration value
+
+Now generate:
+1. project folder structure
+2. frontend scaffold
+3. backend scaffold
+4. Tailwind-based light-mode UI
+5. ChromaDB integration
+6. OpenAI integration
+7. dynamic system prompt builder
+8. grounding mode logic
+9. safe Reasoning Trace implementation
+10. token control config
+11. initial working prototype code
+
+Make the result runnable in Replit with clean, readable, modular code.
