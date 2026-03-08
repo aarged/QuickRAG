@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, integer, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, integer, timestamp, real, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -7,6 +7,7 @@ export const documents = pgTable("documents", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   content: text("content").notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 

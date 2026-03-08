@@ -66,52 +66,71 @@ export function ChatPanel() {
       const decoder = new TextDecoder();
       let fullContent = "";
       let assistantAdded = false;
+      let buffer = "";
 
       updatePipelineStep(1, "done");
       updatePipelineStep(2, "active");
+
+      const processEvent = (jsonStr: string) => {
+        try {
+          const event = JSON.parse(jsonStr);
+
+          if (event.type === "context") {
+            setLastRetrievedChunks(event.chunks || []);
+            updatePipelineStep(2, "done");
+            updatePipelineStep(3, "done");
+            updatePipelineStep(4, "active");
+
+            if (!assistantAdded) {
+              addMessage({ role: "assistant", content: "" });
+              assistantAdded = true;
+            }
+          } else if (event.type === "token") {
+            fullContent += event.content;
+            updateLastAssistantContent(fullContent);
+          } else if (event.type === "done") {
+            updatePipelineStep(4, "done");
+            const inputT = event.inputTokens || 0;
+            const outputT = event.outputTokens || 0;
+            incrementTokens(inputT, outputT);
+            setLastTokens(inputT, outputT);
+          } else if (event.type === "error") {
+            if (!assistantAdded) {
+              addMessage({ role: "assistant", content: "Sorry, an error occurred while generating the response." });
+            } else {
+              updateLastAssistantContent(fullContent || "Sorry, an error occurred.");
+            }
+          }
+        } catch {}
+      };
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const text = decoder.decode(value, { stream: true });
-        const lines = text.split("\n");
+        buffer += decoder.decode(value, { stream: true });
 
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+
+        for (const part of parts) {
+          const lines = part.split("\n");
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr) processEvent(jsonStr);
+          }
+        }
+      }
+
+      buffer += decoder.decode();
+
+      if (buffer.trim()) {
+        const lines = buffer.split("\n");
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           const jsonStr = line.slice(6).trim();
-          if (!jsonStr) continue;
-
-          try {
-            const event = JSON.parse(jsonStr);
-
-            if (event.type === "context") {
-              setLastRetrievedChunks(event.chunks || []);
-              updatePipelineStep(2, "done");
-              updatePipelineStep(3, "done");
-              updatePipelineStep(4, "active");
-
-              if (!assistantAdded) {
-                addMessage({ role: "assistant", content: "" });
-                assistantAdded = true;
-              }
-            } else if (event.type === "token") {
-              fullContent += event.content;
-              updateLastAssistantContent(fullContent);
-            } else if (event.type === "done") {
-              updatePipelineStep(4, "done");
-              const inputT = event.inputTokens || 0;
-              const outputT = event.outputTokens || 0;
-              incrementTokens(inputT, outputT);
-              setLastTokens(inputT, outputT);
-            } else if (event.type === "error") {
-              if (!assistantAdded) {
-                addMessage({ role: "assistant", content: "Sorry, an error occurred while generating the response." });
-              } else {
-                updateLastAssistantContent(fullContent || "Sorry, an error occurred.");
-              }
-            }
-          } catch {}
+          if (jsonStr) processEvent(jsonStr);
         }
       }
     } catch (err) {

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useAppStore, GroundingMode, Voice, Style } from "@/store";
+import { useAppStore, GroundingMode, Voice, Style, DocumentSource } from "@/store";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -23,7 +23,8 @@ export function ControlsPanel() {
         const docs = await res.json();
         store.setDocuments(docs);
         if (docs.length > 0 && !store.activeDocumentId) {
-          store.setActiveDocumentId(docs[0].id);
+          const defaultDoc = docs.find((d: any) => d.isDefault);
+          store.setActiveDocumentId(defaultDoc ? defaultDoc.id : docs[0].id);
         }
       }
     } catch (err) {
@@ -47,6 +48,7 @@ export function ControlsPanel() {
       if (res.ok) {
         const doc = await res.json();
         await fetchDocuments();
+        store.setDocumentSource("user");
         store.setActiveDocumentId(doc.id);
       }
     } catch (err) {
@@ -62,11 +64,29 @@ export function ControlsPanel() {
       await fetch(`/api/documents/${id}`, { method: "DELETE" });
       await fetchDocuments();
       if (store.activeDocumentId === id) {
-        const remaining = store.documents.filter(d => d.id !== id);
-        store.setActiveDocumentId(remaining.length > 0 ? remaining[0].id : null);
+        const remaining = store.documents.filter(d => d.id !== id && !d.isDefault);
+        if (remaining.length > 0) {
+          store.setActiveDocumentId(remaining[0].id);
+        } else {
+          const defaultDoc = store.documents.find(d => d.isDefault);
+          store.setDocumentSource("default");
+          store.setActiveDocumentId(defaultDoc ? defaultDoc.id : null);
+        }
       }
     } catch (err) {
       console.error("Failed to delete document:", err);
+    }
+  };
+
+  const handleSourceChange = (source: DocumentSource) => {
+    store.setDocumentSource(source);
+    const filtered = store.documents.filter(d =>
+      source === "default" ? d.isDefault : !d.isDefault
+    );
+    if (filtered.length > 0) {
+      store.setActiveDocumentId(filtered[0].id);
+    } else {
+      store.setActiveDocumentId(null);
     }
   };
 
@@ -93,7 +113,10 @@ export function ControlsPanel() {
     return prompt;
   };
 
-  const activeDoc = store.documents.find(d => d.id === store.activeDocumentId);
+  const defaultDocs = store.documents.filter(d => d.isDefault);
+  const userDocs = store.documents.filter(d => !d.isDefault);
+  const filteredDocs = store.documentSource === "default" ? defaultDocs : userDocs;
+  const activeDoc = filteredDocs.find(d => d.id === store.activeDocumentId);
 
   return (
     <div className="flex flex-col h-full bg-secondary/30">
@@ -109,10 +132,39 @@ export function ControlsPanel() {
         <div className="space-y-6">
           <div className="space-y-3">
             <Label className="font-medium text-xs uppercase tracking-wider flex items-center gap-2 text-[#0048ad]">
+              Source
+            </Label>
+
+            <div className="grid grid-cols-2 gap-1 p-1 bg-secondary/50 rounded-lg" data-testid="toggle-document-source">
+              <button
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  store.documentSource === "default"
+                    ? "bg-card shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => handleSourceChange("default")}
+                data-testid="button-source-default"
+              >
+                Default
+              </button>
+              <button
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  store.documentSource === "user"
+                    ? "bg-card shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => handleSourceChange("user")}
+                data-testid="button-source-user"
+              >
+                User
+              </button>
+            </div>
+
+            <Label className="font-medium text-xs uppercase tracking-wider flex items-center gap-2 text-[#0048ad]">
               Document
             </Label>
 
-            {store.documents.length > 0 && (
+            {filteredDocs.length > 0 && (
               <Select
                 value={store.activeDocumentId?.toString() || ""}
                 onValueChange={(val) => store.setActiveDocumentId(parseInt(val))}
@@ -121,7 +173,7 @@ export function ControlsPanel() {
                   <SelectValue placeholder="Select document" />
                 </SelectTrigger>
                 <SelectContent>
-                  {store.documents.map(doc => (
+                  {filteredDocs.map(doc => (
                     <SelectItem key={doc.id} value={doc.id.toString()}>{doc.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -134,44 +186,54 @@ export function ControlsPanel() {
                   <FileText className="w-4 h-4 text-primary/70 shrink-0" />
                   <span className="truncate">{activeDoc.name}</span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 shrink-0"
-                  onClick={() => handleDeleteDocument(activeDoc.id)}
-                  data-testid="button-delete-document"
-                >
-                  <X className="w-3 h-3" />
-                </Button>
+                {!activeDoc.isDefault && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 shrink-0"
+                    onClick={() => handleDeleteDocument(activeDoc.id)}
+                    data-testid="button-delete-document"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                )}
               </div>
             )}
 
-            <div className="p-4 border rounded-lg border-dashed bg-card/50">
-              <div className="flex flex-col items-center justify-center text-center space-y-2">
-                {store.isUploading ? (
-                  <>
-                    <Loader2 className="w-8 h-8 text-primary/70 animate-spin" />
-                    <p className="text-sm font-medium">Uploading & chunking...</p>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mb-1">
-                      <Upload className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Upload Document</p>
-                      <p className="text-xs text-muted-foreground mt-1">TXT files up to 10MB</p>
-                    </div>
-                    <label className="mt-2 w-full">
-                      <div className="w-full h-8 flex items-center justify-center bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md text-xs font-medium transition-colors cursor-pointer" data-testid="button-upload-file">
-                        Select File
-                      </div>
-                      <input ref={fileInputRef} type="file" className="hidden" accept=".txt" onChange={handleFileUpload} />
-                    </label>
-                  </>
-                )}
+            {store.documentSource === "default" && filteredDocs.length === 0 && (
+              <div className="p-3 text-center text-xs text-muted-foreground">
+                No default documents available.
               </div>
-            </div>
+            )}
+
+            {store.documentSource === "user" && (
+              <div className="p-4 border rounded-lg border-dashed bg-card/50">
+                <div className="flex flex-col items-center justify-center text-center space-y-2">
+                  {store.isUploading ? (
+                    <>
+                      <Loader2 className="w-8 h-8 text-primary/70 animate-spin" />
+                      <p className="text-sm font-medium">Uploading & chunking...</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mb-1">
+                        <Upload className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Upload Document</p>
+                        <p className="text-xs text-muted-foreground mt-1">TXT files up to 10MB</p>
+                      </div>
+                      <label className="mt-2 w-full">
+                        <div className="w-full h-8 flex items-center justify-center bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md text-xs font-medium transition-colors cursor-pointer" data-testid="button-upload-file">
+                          Select File
+                        </div>
+                        <input ref={fileInputRef} type="file" className="hidden" accept=".txt" onChange={handleFileUpload} />
+                      </label>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <Separator />

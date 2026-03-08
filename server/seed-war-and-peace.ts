@@ -138,6 +138,7 @@ async function seed() {
   const [doc] = await db.insert(documents).values({
     name: DOC_NAME,
     content: cleanText,
+    isDefault: true,
   }).returning();
   console.log(`Document created with id ${doc.id}.`);
 

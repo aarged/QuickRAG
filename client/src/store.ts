@@ -26,9 +26,12 @@ export type RetrievedChunk = {
 export type DocumentInfo = {
   id: number;
   name: string;
+  isDefault: boolean;
   createdAt: string;
   chunkCount?: number;
 };
+
+export type DocumentSource = "default" | "user";
 
 export type PipelineStep = {
   step: number;
@@ -49,6 +52,8 @@ interface AppState {
   setDocuments: (docs: DocumentInfo[]) => void;
   activeDocumentId: number | null;
   setActiveDocumentId: (id: number | null) => void;
+  documentSource: DocumentSource;
+  setDocumentSource: (source: DocumentSource) => void;
   isUploading: boolean;
   setIsUploading: (v: boolean) => void;
 
@@ -91,6 +96,8 @@ export const useAppStore = create<AppState>((set) => ({
   setDocuments: (documents) => set({ documents }),
   activeDocumentId: null,
   setActiveDocumentId: (activeDocumentId) => set({ activeDocumentId }),
+  documentSource: "default",
+  setDocumentSource: (documentSource) => set({ documentSource }),
   isUploading: false,
   setIsUploading: (isUploading) => set({ isUploading }),
 

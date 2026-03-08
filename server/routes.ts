@@ -59,6 +59,10 @@ export async function registerRoutes(
   app.delete("/api/documents/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const doc = await storage.getDocument(id);
+      if (doc?.isDefault) {
+        return res.status(403).json({ error: "Default documents cannot be deleted" });
+      }
       await storage.deleteDocument(id);
 
       deleteDocumentCollection(id).catch((err) => {
@@ -126,6 +130,7 @@ export async function registerRoutes(
 
       res.write(`data: ${JSON.stringify({
         type: "done",
+        inputTokens,
         outputTokens,
         totalTokens: inputTokens + outputTokens,
         chunksUsed: retrievedChunks.length,
