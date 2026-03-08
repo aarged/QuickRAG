@@ -56,7 +56,6 @@ export function ChatPanel() {
       <div className="flex items-center justify-between p-4 border-b">
         <div>
           <h2 className="text-lg font-semibold tracking-tight">QuickRag</h2>
-          <p className="text-xs text-muted-foreground">Minimalist RAG Demonstration</p>
         </div>
         <Button variant="ghost" size="sm" onClick={clearChat} title="Clear Chat" className="text-muted-foreground hover:text-foreground">
           <Trash2 className="w-4 h-4 mr-2" />
