@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useAppStore } from "@/store";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, BrainCircuit, Activity, Hash, AlignLeft, Info, TerminalSquare } from "lucide-react";
+import { Search, BrainCircuit, Activity, Hash, AlignLeft, Info, TerminalSquare, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export function DebugPanel() {
   const store = useAppStore();
@@ -28,8 +29,11 @@ export function DebugPanel() {
 
   return (
     <div className="flex flex-col h-full bg-secondary/20">
-      <div className="h-14 px-4 border-b bg-background/50 flex items-center shrink-0">
-        <h2 className="text-sm font-semibold tracking-tight flex items-center gap-2">
+      <div className="h-14 px-4 border-b bg-background/50 flex items-center justify-between shrink-0">
+        <Button variant="ghost" size="icon" onClick={store.toggleDebug} className="h-8 w-8 shrink-0 -ml-2">
+          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+        </Button>
+        <h2 className="text-sm font-semibold tracking-tight">
           Output
         </h2>
       </div>

@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Upload, FileText, Database, Settings2, SlidersHorizontal, UserSquare2, BookOpen } from "lucide-react";
+import { Upload, FileText, Database, Settings2, SlidersHorizontal, UserSquare2, BookOpen, ChevronLeft } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 export function ControlsPanel() {
@@ -52,10 +52,13 @@ export function ControlsPanel() {
 
   return (
     <div className="flex flex-col h-full bg-secondary/30">
-      <div className="h-14 px-4 border-b bg-background/50 flex items-center shrink-0">
-        <h2 className="text-sm font-semibold tracking-tight flex items-center gap-2">
+      <div className="h-14 px-4 border-b bg-background/50 flex items-center justify-between shrink-0">
+        <h2 className="text-sm font-semibold tracking-tight">
           Configuration
         </h2>
+        <Button variant="ghost" size="icon" onClick={store.toggleConfig} className="h-8 w-8 shrink-0 -mr-2">
+          <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+        </Button>
       </div>
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-6">

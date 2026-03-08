@@ -3,7 +3,7 @@ import { useAppStore } from "@/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Trash2, Bot, User, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { Send, Trash2, Bot, User, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export function ChatPanel() {
@@ -54,18 +54,22 @@ export function ChatPanel() {
   return (
     <div className="flex flex-col h-full bg-card relative">
       <div className="h-14 flex items-center justify-between px-4 border-b bg-background/50 shrink-0">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={toggleConfig} title="Toggle Configuration Panel" className="h-8 w-8 shrink-0">
-            {isConfigOpen ? <PanelLeftClose className="w-5 h-5 text-muted-foreground" /> : <PanelLeftOpen className="w-5 h-5 text-muted-foreground" />}
-          </Button>
+        <div className="flex items-center">
+          {!isConfigOpen && (
+            <Button variant="ghost" size="icon" onClick={toggleConfig} title="Open Configuration Panel" className="h-8 w-8 shrink-0 -ml-2">
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </Button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={clearChat} title="Clear Chat" className="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 border border-transparent min-h-8 rounded-md px-3 text-xs h-8 hover:text-foreground text-[#ffffff] bg-[#0048ade6]">
             Clear
           </Button>
-          <Button variant="ghost" size="icon" onClick={toggleDebug} title="Toggle Debug Panel" className="h-8 w-8 shrink-0">
-            {isDebugOpen ? <PanelRightClose className="w-5 h-5 text-muted-foreground" /> : <PanelRightOpen className="w-5 h-5 text-muted-foreground" />}
-          </Button>
+          {!isDebugOpen && (
+            <Button variant="ghost" size="icon" onClick={toggleDebug} title="Open Debug Panel" className="h-8 w-8 shrink-0 -mr-2">
+              <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+            </Button>
+          )}
         </div>
       </div>
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
