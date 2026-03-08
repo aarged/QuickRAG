@@ -60,11 +60,6 @@ export function DebugPanel() {
                   Context Window
                 </TabsTrigger>
               </TabsList>
-              {contextTab === "chunks" && (
-                <Badge variant="outline" className="text-[10px] h-5 bg-background font-mono">
-                  {mockChunks.length} chunks
-                </Badge>
-              )}
             </div>
             
             <TabsContent value="chunks" className="flex-1 m-0 data-[state=active]:flex flex-col min-h-0">
