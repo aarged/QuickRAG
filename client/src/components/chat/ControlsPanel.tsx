@@ -182,9 +182,9 @@ export function ControlsPanel() {
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="prompt" className="border-none">
                 <AccordionTrigger className="hover:no-underline py-2 rounded px-2 hover:bg-secondary/50 text-sm">
-                  <div className="flex items-center gap-2 text-[#0048ad]">
+                  <div className="flex items-center gap-2 text-[#0048ad] text-[12px]">
                     <UserSquare2 className="w-4 h-4 text-muted-foreground" />
-                    System Prompt
+                    SYSTEM PROMPT
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
