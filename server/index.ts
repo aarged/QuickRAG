@@ -50,7 +50,11 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        const safeBody = { ...capturedJsonResponse };
+        if (safeBody.content && typeof safeBody.content === "string" && safeBody.content.length > 200) {
+          safeBody.content = safeBody.content.substring(0, 200) + `... [${safeBody.content.length} chars]`;
+        }
+        logLine += ` :: ${JSON.stringify(safeBody)}`;
       }
 
       log(logLine);
@@ -61,6 +65,23 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  const { storage } = await import("./storage");
+  const { deleteDocumentCollection } = await import("./chromadb");
+
+  try {
+    const deletedIds = await storage.deleteNonDefaultDocuments();
+    if (deletedIds.length > 0) {
+      console.log(`[Cleanup] Removed ${deletedIds.length} session-ephemeral document(s): ${deletedIds.join(", ")}`);
+      for (const id of deletedIds) {
+        deleteDocumentCollection(id).catch((err) => {
+          console.error(`[Cleanup] Failed to delete ChromaDB collection for doc ${id}:`, err);
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[Cleanup] Failed to clean up non-default documents:", err);
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

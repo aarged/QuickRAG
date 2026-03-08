@@ -22,14 +22,52 @@ export async function registerRoutes(
 
   app.post("/api/documents", async (req, res) => {
     try {
-      const { name, content } = req.body;
-      if (!name || !content) {
-        return res.status(400).json({ error: "Name and content are required" });
+      const { name, pdfBase64 } = req.body;
+      if (!name || !pdfBase64) {
+        return res.status(400).json({ error: "Name and PDF content are required" });
       }
 
-      const doc = await storage.createDocument({ name, content });
-      const textChunks = chunkText(content);
+      const ownerPin = req.headers["x-owner-pin"] as string | undefined;
+      const isOwner = ownerPin && process.env.OWNER_PIN && ownerPin === process.env.OWNER_PIN;
+
+      const pdfBuffer = Buffer.from(pdfBase64, "base64");
+
+      const MAX_PDF_SIZE = 10 * 1024 * 1024;
+      if (pdfBuffer.length > MAX_PDF_SIZE) {
+        return res.status(400).json({ error: "PDF exceeds 10MB size limit." });
+      }
+
+      if (!isOwner) {
+        const logged = await storage.tryLogUploadAtomic();
+        if (!logged) {
+          return res.status(429).json({
+            error: "Upload limit reached (1 per day). Try again tomorrow.",
+          });
+        }
+      }
+
+      const pdfParse = (await import("pdf-parse")).default;
+      let extractedText: string;
+
+      try {
+        const pdfData = await pdfParse(pdfBuffer);
+        extractedText = pdfData.text;
+      } catch (pdfErr) {
+        console.error("PDF parse error:", pdfErr);
+        return res.status(400).json({ error: "Failed to parse PDF. Please ensure the file is a valid PDF." });
+      }
+
+      if (!extractedText || extractedText.trim().length < 50) {
+        return res.status(400).json({ error: "PDF appears to contain no extractable text. Scanned/image PDFs are not supported." });
+      }
+
+      const doc = await storage.createDocument({ name, content: extractedText });
+      const textChunks = chunkText(extractedText);
       const dbChunks = await storage.createChunks(doc.id, textChunks);
+
+      if (isOwner) {
+        await storage.logUpload();
+      }
 
       res.status(201).json({ ...doc, chunkCount: textChunks.length });
 

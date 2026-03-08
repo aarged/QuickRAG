@@ -24,6 +24,7 @@ export interface IStorage {
 
   logUpload(): Promise<void>;
   getUploadCountLast24h(): Promise<number>;
+  tryLogUploadAtomic(): Promise<boolean>;
   deleteNonDefaultDocuments(): Promise<number[]>;
 }
 
@@ -154,6 +155,17 @@ class DatabaseStorage implements IStorage {
       .from(uploadLog)
       .where(gt(uploadLog.uploadedAt, oneDayAgo));
     return Number(result[0]?.count || 0);
+  }
+
+  async tryLogUploadAtomic(): Promise<boolean> {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const result = await db.execute(sql`
+      INSERT INTO upload_log (uploaded_at)
+      SELECT NOW()
+      WHERE (SELECT COUNT(*) FROM upload_log WHERE uploaded_at > ${oneDayAgo}) < 1
+      RETURNING id
+    `);
+    return (result as any).length > 0 || (result as any).rowCount > 0;
   }
 
   async deleteNonDefaultDocuments(): Promise<number[]> {

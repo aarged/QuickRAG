@@ -1,16 +1,29 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAppStore, GroundingMode, Voice, Style, DocumentSource } from "@/store";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import { Upload, FileText, X, ChevronLeft, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+const DISMISS_KEY = "quickrag_upload_warning_dismissed";
 
 export function ControlsPanel() {
   const store = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showSourceDialog, setShowSourceDialog] = useState(false);
+  const [pendingSource, setPendingSource] = useState<DocumentSource | null>(null);
+  const [ownerPin, setOwnerPin] = useState("");
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDocuments();
@@ -32,27 +45,74 @@ export function ControlsPanel() {
     }
   };
 
+  const handleSelectFileClick = () => {
+    setUploadError(null);
+    const dismissed = localStorage.getItem(DISMISS_KEY) === "true";
+    if (dismissed) {
+      fileInputRef.current?.click();
+    } else {
+      setShowUploadDialog(true);
+    }
+  };
+
+  const handleUploadDialogContinue = () => {
+    if (dontShowAgain) {
+      localStorage.setItem(DISMISS_KEY, "true");
+    }
+    setShowUploadDialog(false);
+    fileInputRef.current?.click();
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      setUploadError("File exceeds 10MB size limit.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setUploadError(null);
     store.setIsUploading(true);
     try {
-      const text = await file.text();
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
+      );
+
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (ownerPin.trim()) {
+        headers["X-Owner-Pin"] = ownerPin.trim();
+      }
+
       const res = await fetch("/api/documents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: file.name, content: text }),
+        headers,
+        body: JSON.stringify({ name: file.name.replace(/\.pdf$/i, ""), pdfBase64: base64 }),
       });
 
-      if (res.ok) {
-        const doc = await res.json();
-        await fetchDocuments();
-        store.setDocumentSource("user");
-        store.setActiveDocumentId(doc.id);
+      if (res.status === 429) {
+        const data = await res.json();
+        setUploadError(data.error || "Upload limit reached. Try again tomorrow.");
+        return;
       }
+
+      if (!res.ok) {
+        const data = await res.json();
+        setUploadError(data.error || "Upload failed.");
+        return;
+      }
+
+      const doc = await res.json();
+      await fetchDocuments();
+      store.setDocumentSource("user");
+      store.setActiveDocumentId(doc.id);
+      store.clearChat();
     } catch (err) {
       console.error("Failed to upload document:", err);
+      setUploadError("Failed to upload document. Please try again.");
     } finally {
       store.setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -78,7 +138,20 @@ export function ControlsPanel() {
     }
   };
 
-  const handleSourceChange = (source: DocumentSource) => {
+  const handleSourceToggle = (source: DocumentSource) => {
+    if (source === store.documentSource) return;
+
+    const hasChat = store.messages.some(m => m.id !== "welcome");
+    if (hasChat) {
+      setPendingSource(source);
+      setShowSourceDialog(true);
+    } else {
+      applySourceChange(source);
+    }
+  };
+
+  const applySourceChange = (source: DocumentSource) => {
+    store.clearChat();
     store.setDocumentSource(source);
     const filtered = store.documents.filter(d =>
       source === "default" ? d.isDefault : !d.isDefault
@@ -88,6 +161,14 @@ export function ControlsPanel() {
     } else {
       store.setActiveDocumentId(null);
     }
+  };
+
+  const handleSourceDialogConfirm = () => {
+    if (pendingSource) {
+      applySourceChange(pendingSource);
+    }
+    setShowSourceDialog(false);
+    setPendingSource(null);
   };
 
   const generateSystemPrompt = () => {
@@ -142,7 +223,7 @@ export function ControlsPanel() {
                     ? "bg-card shadow-sm text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
-                onClick={() => handleSourceChange("default")}
+                onClick={() => handleSourceToggle("default")}
                 data-testid="button-source-default"
               >
                 Default
@@ -153,7 +234,7 @@ export function ControlsPanel() {
                     ? "bg-card shadow-sm text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
-                onClick={() => handleSourceChange("user")}
+                onClick={() => handleSourceToggle("user")}
                 data-testid="button-source-user"
               >
                 User
@@ -212,7 +293,8 @@ export function ControlsPanel() {
                   {store.isUploading ? (
                     <>
                       <Loader2 className="w-8 h-8 text-primary/70 animate-spin" />
-                      <p className="text-sm font-medium">Uploading & chunking...</p>
+                      <p className="text-sm font-medium">Uploading & indexing...</p>
+                      <p className="text-xs text-muted-foreground">Parsing PDF, chunking text, generating embeddings...</p>
                     </>
                   ) : (
                     <>
@@ -221,14 +303,29 @@ export function ControlsPanel() {
                       </div>
                       <div>
                         <p className="text-sm font-medium">Upload Document</p>
-                        <p className="text-xs text-muted-foreground mt-1">TXT files up to 10MB</p>
+                        <p className="text-xs text-muted-foreground mt-1">PDF files up to 10MB</p>
                       </div>
-                      <label className="mt-2 w-full">
-                        <div className="w-full h-8 flex items-center justify-center bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md text-xs font-medium transition-colors cursor-pointer" data-testid="button-upload-file">
-                          Select File
-                        </div>
-                        <input ref={fileInputRef} type="file" className="hidden" accept=".txt" onChange={handleFileUpload} />
-                      </label>
+                      <div
+                        className="mt-2 w-full h-8 flex items-center justify-center bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md text-xs font-medium transition-colors cursor-pointer"
+                        onClick={handleSelectFileClick}
+                        data-testid="button-upload-file"
+                      >
+                        Select File
+                      </div>
+                      <input ref={fileInputRef} type="file" className="hidden" accept=".pdf" onChange={handleFileUpload} />
+                      <div className="w-full mt-2">
+                        <Input
+                          type="password"
+                          placeholder="Owner PIN (optional)"
+                          value={ownerPin}
+                          onChange={(e) => setOwnerPin(e.target.value)}
+                          className="h-7 text-xs"
+                          data-testid="input-owner-pin-inline"
+                        />
+                      </div>
+                      {uploadError && (
+                        <p className="text-xs text-destructive mt-2 px-2" data-testid="text-upload-error">{uploadError}</p>
+                      )}
                     </>
                   )}
                 </div>
@@ -311,6 +408,69 @@ export function ControlsPanel() {
           </div>
         </div>
       </ScrollArea>
+
+      <AlertDialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Upload Document</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Uploaded documents are temporary and will be removed at the end of the session.
+                  The vector embeddings (ChromaDB collection) will also be deleted.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Uploads are limited to 1 per day. If you have an owner PIN, enter it below to bypass this limit.
+                </p>
+                <div className="pt-1">
+                  <Label className="text-xs font-medium">Owner PIN (optional)</Label>
+                  <Input
+                    type="password"
+                    placeholder="Enter PIN to bypass daily limit"
+                    value={ownerPin}
+                    onChange={(e) => setOwnerPin(e.target.value)}
+                    className="mt-1 h-8 text-sm"
+                    data-testid="input-owner-pin"
+                  />
+                </div>
+                <label className="flex items-center gap-2 pt-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={dontShowAgain}
+                    onChange={(e) => setDontShowAgain(e.target.checked)}
+                    className="rounded border-muted-foreground"
+                    data-testid="checkbox-dont-show"
+                  />
+                  <span className="text-xs">Don't show this again</span>
+                </label>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-upload-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleUploadDialogContinue} data-testid="button-upload-continue">
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showSourceDialog} onOpenChange={setShowSourceDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Switch Document Source</AlertDialogTitle>
+            <AlertDialogDescription>
+              Switching sources will clear the current chat history. Do you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingSource(null)} data-testid="button-source-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSourceDialogConfirm} data-testid="button-source-confirm">
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
