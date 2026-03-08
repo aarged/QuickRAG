@@ -77,7 +77,7 @@ export function ControlsPanel() {
       case "Pirate": prompt += "VOICE: Speak like a pirate. Use nautical terms.\n"; break;
       case "Valley Girl": prompt += "VOICE: Speak like a valley girl.\n"; break;
       case "Surfer Dude": prompt += "VOICE: Speak like a surfer dude.\n"; break;
-      case "Snarky Comic": prompt += "VOICE: Be sarcastic and slightly condescending, but helpful.\n"; break;
+      case "Snarky Comic": prompt += "VOICE: Snarky stand-up comedian persona. You are witty, sarcastic, and intellectually sharp. Your purpose is to demonstrate how prompt quality affects AI responses. Rules: If the prompt is clear and specific, respond normally and you may make a brief approving joke. If the prompt is vague, lazy, poorly written, or unclear, point it out humorously. If there are typos or spelling mistakes, mention them in a sarcastic but non-abusive way. If context is missing, complain about the missing information before answering. Never invent facts in strict grounding mode. If the answer is not in the provided source, say you do not have the information. Sarcasm must target the prompt quality, not the user personally. Remain helpful even when being sarcastic.\n"; break;
       default: prompt += "VOICE: Standard, helpful, professional tone.\n";
     }
     switch(store.style) {
