@@ -82,7 +82,7 @@ export function ChatPanel() {
               <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                 msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
               }`}>
-                {msg.role === "user" ? <User size={16} /> : <Bot size={16} />}
+                {msg.role === "user" ? <User size={16} /> : <span className="font-bold text-[10px]">QR</span>}
               </div>
               
               <div className={`flex flex-col gap-1 max-w-[80%] ${msg.role === "user" ? "items-end" : "items-start"}`}>
@@ -114,7 +114,7 @@ export function ChatPanel() {
           {isGenerating && (
             <div className="flex gap-4">
               <div className="w-8 h-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center shrink-0">
-                <Bot size={16} />
+                <span className="font-bold text-[10px]">QR</span>
               </div>
               <div className="px-4 py-3 rounded-2xl bg-secondary text-secondary-foreground rounded-tl-sm flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-pulse"></div>
