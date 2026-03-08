@@ -1,0 +1,96 @@
+OpenAI Integration
+Library: openai npm package (the official OpenAI Node.js SDK).
+
+Initialisation pattern:
+
+import OpenAI from "openai";
+const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+Models used:
+
+Chat completions: gpt-4o
+Embeddings: text-embedding-3-small
+Embedding generation:
+
+const response = await openai.embeddings.create({
+  model: "text-embedding-3-small",
+  input: textString,
+});
+const vector = response.data[0].embedding; // number[]
+Embeddings are pre-computed on the server, then passed directly to ChromaDB. ChromaDB's own embedding function is disabled (embeddingFunction: undefined) so that OpenAI is always the sole embedding source.
+
+Where the key lives:
+
+Primary: environment variable OPENAI_API_KEY (set via Replit Secrets).
+Override per-tenant: stored in the integrations database table with type = 'tenant_openai', under the secrets JSONB column: { apiKey, chatModel, embeddingModel }.
+Global admin fallback also uses type = 'openai_api' (same DB table).
+Credential resolution order: tenant-specific DB row → global env var OPENAI_API_KEY.
+
+ChromaDB Integration
+Library: chromadb npm package. Uses the CloudClient (ChromaDB Cloud), not a self-hosted server.
+
+Initialisation pattern:
+
+import { CloudClient } from "chromadb";
+const chromaClient = new CloudClient({
+  apiKey: "chroma_...",
+  tenant: "<your-chromadb-tenant-id>",
+  database: "YourDatabaseName",
+});
+Where the credentials live:
+
+Primary: stored in the integrations database table with type = 'chromadb_config', under the secrets JSONB column: { apiKey, url } — note that url actually stores the ChromaDB tenant ID, not a URL.
+Env var fallback: CHROMADB_API_KEY and CHROMADB_TENANT environment variables.
+Override per-tenant: stored in the same integrations table with type = 'tenant_vector_store', under secrets.chromadb: { apiKey, tenant }.
+Credential resolution order: tenant-specific DB row → global DB row (chromadb_config) → env vars.
+
+Collection naming convention:
+
+const collectionName = `tenant_${sanitizedTenantName}`;
+// sanitization: lowercase, spaces→underscores, specials→dashes, min 3 chars
+Adding chunks (upsert flow):
+
+await collection.add({
+  ids: ["entry_<kbEntryId>_chunk_<index>"],
+  embeddings: [preComputedOpenAIEmbedding],
+  documents: [chunkText],
+  metadatas: [{ tenant_id, kb_entry_id, chunk_index, domain, ...fixedFields }],
+});
+Querying:
+
+const results = await collection.query({
+  queryEmbeddings: [queryEmbedding],
+  nResults: 10,
+  where: { tenant_id: tenantId, /* optional metadata filters */ },
+});
+Distance threshold: L2 (Euclidean) distance ≤ 1.8 is used to filter out irrelevant results. Lower = more similar.
+
+Metadata rules:
+
+ChromaDB only accepts string | number | boolean values — no nested objects or arrays.
+Multi-value fields (make, model, serial, item_number) are stored as comma-separated strings and filtered client-side after retrieval (ChromaDB exact-match filtering fails on them).
+All metadata keys are normalised to snake_case before storage.
+Where Secrets Are Managed in the Admin UI
+Global credentials (OpenAI API key + ChromaDB API key and tenant ID) are entered by a Global Admin at /admin/secrets. The UI has two tabs — "OpenAI" and "ChromaDB" — which POST to:
+
+POST /api/admin/secrets/openai → stores in integrations table as type = 'openai_api'
+POST /api/admin/secrets/chromadb → stores in integrations table as type = 'chromadb_config'
+Per-tenant overrides are managed in the Tenant Admin settings page, stored as:
+
+type = 'tenant_openai' (custom OpenAI key + model choices)
+type = 'tenant_vector_store' (custom ChromaDB credentials)
+The integrations table schema (PostgreSQL/Drizzle):
+
+integrations = pgTable("integrations", {
+  id,
+  tenantId,    // null for global integrations
+  type,        // e.g. 'chromadb_config', 'openai_api', 'tenant_openai'
+  secrets,     // JSONB — stores API keys, tenant IDs, model names
+  createdAt,
+  updatedAt,
+});
+Key Architectural Decisions to Copy
+Never use ChromaDB's built-in embedding — always generate with OpenAI and pass pre-computed vectors. This keeps you in full control of the model and cost.
+Singleton client with lazy init — both clients are initialised once and cached in module-level variables.
+Tenant isolation via collection naming — one ChromaDB collection per tenant, named tenant_<sanitized_name>.
+Secrets in DB, not just env vars — storing credentials in the integrations table lets you update keys through the admin UI at runtime without restarting the server.
+Env vars as a last-resort fallback — OPENAI_API_KEY, CHROMADB_API_KEY, and CHROMADB_TENANT act as bootstrap fallbacks if the DB hasn't been seeded yet.
