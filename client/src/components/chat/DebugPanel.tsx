@@ -163,29 +163,6 @@ export function DebugPanel() {
               <div className="bg-card border rounded-lg p-4 space-y-4 shadow-sm">
                 
                 <div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex flex-col border border-border/50 rounded p-2 bg-secondary/20">
-                      <span className="text-[10px] text-muted-foreground mb-1">Source</span>
-                      <span className="font-medium truncate">{store.source}</span>
-                    </div>
-                    <div className="flex flex-col border border-border/50 rounded p-2 bg-secondary/20">
-                      <span className="text-[10px] text-muted-foreground mb-1">Grounding</span>
-                      <span className="font-medium">{store.grounding}</span>
-                    </div>
-                    <div className="flex flex-col border border-border/50 rounded p-2 bg-secondary/20">
-                      <span className="text-[10px] text-muted-foreground mb-1">Voice</span>
-                      <span className="font-medium">{store.voice}</span>
-                    </div>
-                    <div className="flex flex-col border border-border/50 rounded p-2 bg-secondary/20">
-                      <span className="text-[10px] text-muted-foreground mb-1">Style</span>
-                      <span className="font-medium">{store.style}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="h-px bg-border" />
-
-                <div>
                   <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Pipeline Trace (Simulated)</h4>
                   <div className="space-y-3">
                     <div className="flex items-start gap-3">
