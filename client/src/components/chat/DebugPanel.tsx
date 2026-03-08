@@ -30,7 +30,6 @@ export function DebugPanel() {
     <div className="flex flex-col h-full bg-secondary/20">
       <div className="h-14 px-4 border-b bg-background/50 flex items-center shrink-0">
         <h2 className="text-sm font-semibold tracking-tight flex items-center gap-2">
-          <TerminalSquare className="w-4 h-4" />
           Output
         </h2>
       </div>
@@ -39,11 +38,9 @@ export function DebugPanel() {
         <div className="p-3 border-b bg-background/50 shrink-0">
           <TabsList className="grid w-full grid-cols-2 bg-secondary/50 h-9">
             <TabsTrigger value="context" className="text-xs data-[state=active]:bg-card">
-              <Search className="w-3 h-3 mr-2" />
               Context
             </TabsTrigger>
             <TabsTrigger value="reasoning" className="text-xs data-[state=active]:bg-card">
-              <BrainCircuit className="w-3 h-3 mr-2" />
               Reasoning
             </TabsTrigger>
           </TabsList>

@@ -54,7 +54,6 @@ export function ControlsPanel() {
     <div className="flex flex-col h-full bg-secondary/30">
       <div className="h-14 px-4 border-b bg-background/50 flex items-center shrink-0">
         <h2 className="text-sm font-semibold tracking-tight flex items-center gap-2">
-          <Settings2 className="w-4 h-4" />
           Configuration
         </h2>
       </div>
@@ -63,7 +62,6 @@ export function ControlsPanel() {
           {/* Source Selection */}
           <div className="space-y-3">
             <Label className="font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-xs uppercase tracking-wider flex items-center gap-2 text-[#0048ad]">
-              <Database className="w-3 h-3" />
               Source
             </Label>
             
@@ -119,7 +117,6 @@ export function ControlsPanel() {
           {/* AI Controls */}
           <div className="space-y-4">
             <Label className="font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-xs uppercase tracking-wider flex items-center gap-2 text-[#0048ad]">
-              <SlidersHorizontal className="w-3 h-3" />
               Response Controls
             </Label>
             
@@ -183,7 +180,6 @@ export function ControlsPanel() {
               <AccordionItem value="prompt" className="border-none">
                 <AccordionTrigger className="hover:no-underline py-2 rounded px-2 hover:bg-secondary/50 text-sm">
                   <div className="flex items-center gap-2 text-[#0048ad]">
-                    <UserSquare2 className="w-4 h-4 text-muted-foreground" />
                     SYSTEM PROMPT
                   </div>
                 </AccordionTrigger>
