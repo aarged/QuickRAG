@@ -1,54 +1,99 @@
-import { useAppStore, KnowledgeSource, GroundingMode, Voice, Style } from "@/store";
+import { useEffect, useRef } from "react";
+import { useAppStore, GroundingMode, Voice, Style } from "@/store";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Upload, FileText, Database, Settings2, SlidersHorizontal, UserSquare2, BookOpen, ChevronLeft } from "lucide-react";
+import { Upload, FileText, X, ChevronLeft, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 export function ControlsPanel() {
   const store = useAppStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const fetchDocuments = async () => {
+    try {
+      const res = await fetch("/api/documents");
+      if (res.ok) {
+        const docs = await res.json();
+        store.setDocuments(docs);
+        if (docs.length > 0 && !store.activeDocumentId) {
+          store.setActiveDocumentId(docs[0].id);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch documents:", err);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      store.setUploadedFileName(file.name);
-      store.setSource("My Reference");
+    if (!file) return;
+
+    store.setIsUploading(true);
+    try {
+      const text = await file.text();
+      const res = await fetch("/api/documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, content: text }),
+      });
+
+      if (res.ok) {
+        const doc = await res.json();
+        await fetchDocuments();
+        store.setActiveDocumentId(doc.id);
+      }
+    } catch (err) {
+      console.error("Failed to upload document:", err);
+    } finally {
+      store.setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteDocument = async (id: number) => {
+    try {
+      await fetch(`/api/documents/${id}`, { method: "DELETE" });
+      await fetchDocuments();
+      if (store.activeDocumentId === id) {
+        const remaining = store.documents.filter(d => d.id !== id);
+        store.setActiveDocumentId(remaining.length > 0 ? remaining[0].id : null);
+      }
+    } catch (err) {
+      console.error("Failed to delete document:", err);
     }
   };
 
   const generateSystemPrompt = () => {
     let prompt = "You are an AI assistant powered by a RAG pipeline.\n\n";
-    
-    // Voice
     switch(store.voice) {
-      case "Yoda": prompt += "VOICE: Speak like Yoda from the Star Wars franchise. Use an inverted sentence structure. Be cryptic on occasion. Turn the question back on the the user when the opportunity arises.\n"; break;
+      case "Yoda": prompt += "VOICE: Speak like Yoda from Star Wars. Use inverted sentence structure.\n"; break;
       case "Pirate": prompt += "VOICE: Speak like a pirate. Use nautical terms.\n"; break;
-      case "Valley Girl": prompt += "VOICE: Speak like a valley girl. Use words like 'like' and 'literally'.\n"; break;
-      case "Surfer Dude": prompt += "VOICE: Speak like a surfer dude. Use words like 'gnarly' and 'dude'.\n"; break;
+      case "Valley Girl": prompt += "VOICE: Speak like a valley girl.\n"; break;
+      case "Surfer Dude": prompt += "VOICE: Speak like a surfer dude.\n"; break;
       case "Snarky Comic": prompt += "VOICE: Be sarcastic and slightly condescending, but helpful.\n"; break;
-      default: prompt += "VOICE: Use a standard, helpful, professional tone.\n";
+      default: prompt += "VOICE: Standard, helpful, professional tone.\n";
     }
-
-    // Style
     switch(store.style) {
-      case "Terse": prompt += "STYLE: Be extremely brief. One or two sentences maximum.\n"; break;
-      case "Verbose": prompt += "STYLE: Be detailed and comprehensive. Elaborate extensively.\n"; break;
-      default: prompt += "STYLE: Provide a balanced, moderately detailed response.\n";
+      case "Terse": prompt += "STYLE: Be extremely brief.\n"; break;
+      case "Verbose": prompt += "STYLE: Be detailed and comprehensive.\n"; break;
+      default: prompt += "STYLE: Balanced, moderately detailed.\n";
     }
-
-    // Grounding
     if (store.grounding === "Strict") {
-      prompt += "\nGROUNDING: STRICT. You must ONLY answer using the provided retrieved context. If the context does not contain the answer, say 'I do not have enough information to answer that.' Do NOT use outside knowledge.\n";
+      prompt += "\nGROUNDING: STRICT. Only answer using provided context.\n";
     } else {
-      prompt += "\nGROUNDING: CREATIVE. Base your answer primarily on the retrieved context. If the context is insufficient, you may supplement with your general knowledge, but you must clearly indicate when you are doing so.\n";
+      prompt += "\nGROUNDING: CREATIVE. Use context primarily, supplement with general knowledge.\n";
     }
-
-    prompt += `\nSOURCE CONTEXT: The user is querying a knowledge base containing ${store.source === "War and Peace" ? "Leo Tolstoy's 'War and Peace'" : "their uploaded reference document"}.\n`;
-
     return prompt;
   };
+
+  const activeDoc = store.documents.find(d => d.id === store.activeDocumentId);
 
   return (
     <div className="flex flex-col h-full bg-secondary/30">
@@ -56,43 +101,57 @@ export function ControlsPanel() {
         <h2 className="text-sm font-semibold tracking-tight">
           Configuration
         </h2>
-        <Button variant="ghost" size="icon" onClick={store.toggleConfig} className="h-8 w-8 shrink-0 -mr-2">
+        <Button variant="ghost" size="icon" onClick={store.toggleConfig} className="h-8 w-8 shrink-0 -mr-2" data-testid="button-close-config">
           <ChevronLeft className="w-5 h-5 text-muted-foreground" />
         </Button>
       </div>
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-6">
-          {/* Source Selection */}
           <div className="space-y-3">
-            <Label className="font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-xs uppercase tracking-wider flex items-center gap-2 text-[#0048ad]">
-              Source
+            <Label className="font-medium text-xs uppercase tracking-wider flex items-center gap-2 text-[#0048ad]">
+              Document
             </Label>
-            
-            <Select 
-              value={store.source} 
-              onValueChange={(val: KnowledgeSource) => store.setSource(val)}
-            >
-              <SelectTrigger className="bg-card">
-                <SelectValue placeholder="Select source" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="War and Peace">Leo Tolstoys War & Peace</SelectItem>
-                <SelectItem value="My Reference">My Reference</SelectItem>
-              </SelectContent>
-            </Select>
 
-            {/* Upload Area */}
-            <div className={`p-4 border rounded-lg border-dashed transition-colors ${store.source === "My Reference" ? "bg-accent/30 border-primary/30" : "bg-card/50"}`}>
+            {store.documents.length > 0 && (
+              <Select
+                value={store.activeDocumentId?.toString() || ""}
+                onValueChange={(val) => store.setActiveDocumentId(parseInt(val))}
+              >
+                <SelectTrigger className="bg-card" data-testid="select-document">
+                  <SelectValue placeholder="Select document" />
+                </SelectTrigger>
+                <SelectContent>
+                  {store.documents.map(doc => (
+                    <SelectItem key={doc.id} value={doc.id.toString()}>{doc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {activeDoc && (
+              <div className="flex items-center justify-between p-2 bg-card border rounded text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="w-4 h-4 text-primary/70 shrink-0" />
+                  <span className="truncate">{activeDoc.name}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0"
+                  onClick={() => handleDeleteDocument(activeDoc.id)}
+                  data-testid="button-delete-document"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            )}
+
+            <div className="p-4 border rounded-lg border-dashed bg-card/50">
               <div className="flex flex-col items-center justify-center text-center space-y-2">
-                {store.uploadedFileName ? (
+                {store.isUploading ? (
                   <>
-                    <FileText className="w-8 h-8 text-primary/70 mb-1" />
-                    <p className="text-sm font-medium">{store.uploadedFileName}</p>
-                    <p className="text-xs text-muted-foreground">Document loaded</p>
-                    <label className="mt-2 cursor-pointer">
-                      <span className="text-xs text-primary hover:underline">Replace file</span>
-                      <input type="file" className="hidden" accept=".pdf,.txt,.docx" onChange={handleFileUpload} />
-                    </label>
+                    <Loader2 className="w-8 h-8 text-primary/70 animate-spin" />
+                    <p className="text-sm font-medium">Uploading & chunking...</p>
                   </>
                 ) : (
                   <>
@@ -100,14 +159,14 @@ export function ControlsPanel() {
                       <Upload className="w-4 h-4 text-muted-foreground" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">Upload Reference</p>
-                      <p className="text-xs text-muted-foreground mt-1">PDF, TXT, DOCX up to 10MB</p>
+                      <p className="text-sm font-medium">Upload Document</p>
+                      <p className="text-xs text-muted-foreground mt-1">TXT files up to 10MB</p>
                     </div>
                     <label className="mt-2 w-full">
-                      <div className="w-full h-8 flex items-center justify-center bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md text-xs font-medium transition-colors cursor-pointer">
+                      <div className="w-full h-8 flex items-center justify-center bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md text-xs font-medium transition-colors cursor-pointer" data-testid="button-upload-file">
                         Select File
                       </div>
-                      <input type="file" className="hidden" accept=".pdf,.txt,.docx" onChange={handleFileUpload} />
+                      <input ref={fileInputRef} type="file" className="hidden" accept=".txt" onChange={handleFileUpload} />
                     </label>
                   </>
                 )}
@@ -117,34 +176,31 @@ export function ControlsPanel() {
 
           <Separator />
 
-          {/* AI Controls */}
           <div className="space-y-4">
-            <Label className="font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-xs uppercase tracking-wider flex items-center gap-2 text-[#0048ad]">
+            <Label className="font-medium text-xs uppercase tracking-wider flex items-center gap-2 text-[#0048ad]">
               Response Controls
             </Label>
-            
+
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-xs">Grounding</Label>
                 <span className="text-[10px] text-muted-foreground font-mono bg-secondary px-1 rounded">{store.grounding}</span>
               </div>
               <Select value={store.grounding} onValueChange={(val: GroundingMode) => store.setGrounding(val)}>
-                <SelectTrigger className="h-8 bg-card">
+                <SelectTrigger className="h-8 bg-card" data-testid="select-grounding">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Strict">Strict (Source only)</SelectItem>
-                  <SelectItem value="Creative">Creative (Source + Web)</SelectItem>
+                  <SelectItem value="Creative">Creative (Source + general knowledge)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">Voice</Label>
-              </div>
+              <Label className="text-xs">Voice</Label>
               <Select value={store.voice} onValueChange={(val: Voice) => store.setVoice(val)}>
-                <SelectTrigger className="h-8 bg-card">
+                <SelectTrigger className="h-8 bg-card" data-testid="select-voice">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -159,11 +215,9 @@ export function ControlsPanel() {
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">Style</Label>
-              </div>
+              <Label className="text-xs">Style</Label>
               <Select value={store.style} onValueChange={(val: Style) => store.setStyle(val)}>
-                <SelectTrigger className="h-8 bg-card">
+                <SelectTrigger className="h-8 bg-card" data-testid="select-style">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -177,7 +231,6 @@ export function ControlsPanel() {
 
           <Separator />
 
-          {/* System Prompt Viewer */}
           <div className="pt-2">
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="prompt" className="border-none">
@@ -187,14 +240,13 @@ export function ControlsPanel() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="mt-2 p-3 bg-card border rounded-md text-xs font-mono text-muted-foreground whitespace-pre-wrap overflow-x-auto leading-relaxed">
+                  <div className="mt-2 p-3 bg-card border rounded-md text-xs font-mono text-muted-foreground whitespace-pre-wrap overflow-x-auto leading-relaxed" data-testid="text-system-prompt">
                     {generateSystemPrompt()}
                   </div>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
           </div>
-          
         </div>
       </ScrollArea>
     </div>
