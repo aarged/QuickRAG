@@ -9,7 +9,7 @@ export interface IStorage {
   getAllDocuments(): Promise<Document[]>;
   deleteDocument(id: number): Promise<void>;
 
-  createChunks(docId: number, texts: string[]): Promise<Chunk[]>;
+  createChunks(docId: number, texts: string[], sourceLabels?: string[]): Promise<Chunk[]>;
   getChunksByDocument(docId: number): Promise<Chunk[]>;
   searchChunks(docId: number, query: string, topK?: number): Promise<(Chunk & { rank: number })[]>;
 
@@ -42,11 +42,12 @@ class DatabaseStorage implements IStorage {
     await db.delete(documents).where(eq(documents.id, id));
   }
 
-  async createChunks(docId: number, texts: string[]): Promise<Chunk[]> {
+  async createChunks(docId: number, texts: string[], sourceLabels?: string[]): Promise<Chunk[]> {
     const values = texts.map((content, i) => ({
       documentId: docId,
       content,
       chunkIndex: i,
+      source: sourceLabels?.[i] || null,
     }));
     return db.insert(chunks).values(values).returning();
   }
@@ -69,7 +70,7 @@ class DatabaseStorage implements IStorage {
     }
 
     const results = await db.execute(sql`
-      SELECT id, document_id as "documentId", content, chunk_index as "chunkIndex",
+      SELECT id, document_id as "documentId", content, chunk_index as "chunkIndex", source,
         ts_rank_cd(to_tsvector('english', content), to_tsquery('english', ${tsQuery})) as rank
       FROM chunks
       WHERE document_id = ${docId}
@@ -84,6 +85,7 @@ class DatabaseStorage implements IStorage {
         documentId: r.documentId,
         content: r.content,
         chunkIndex: r.chunkIndex,
+        source: r.source || null,
         rank: parseFloat(r.rank),
       }));
     }

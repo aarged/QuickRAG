@@ -15,6 +15,7 @@ export const chunks = pgTable("chunks", {
   documentId: integer("document_id").notNull().references(() => documents.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   chunkIndex: integer("chunk_index").notNull(),
+  source: text("source"),
 });
 
 export const conversations = pgTable("conversations", {

@@ -55,7 +55,7 @@ export async function retrieveChunks(
       content: c.content,
       chunkIndex: c.chunkIndex,
       score: 0.3,
-      source: `${doc.name} - Chunk ${c.chunkIndex + 1}`,
+      source: c.source || `${doc.name} — Chunk ${c.chunkIndex + 1}`,
     }));
   }
 
@@ -65,7 +65,7 @@ export async function retrieveChunks(
     content: r.content,
     chunkIndex: r.chunkIndex,
     score: Math.min(0.95, 0.5 + (r.rank / maxRank) * 0.45),
-    source: `${doc.name} - Chunk ${r.chunkIndex + 1}`,
+    source: r.source || `${doc.name} — Chunk ${r.chunkIndex + 1}`,
   }));
 }
 
