@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { chunkText, retrieveChunks, buildSystemPrompt, streamChat, estimateTokens } from "./rag";
+import { indexChunks, deleteDocumentCollection } from "./chromadb";
 import type { RAGConfig } from "./rag";
 
 export async function registerRoutes(
@@ -28,9 +29,27 @@ export async function registerRoutes(
 
       const doc = await storage.createDocument({ name, content });
       const textChunks = chunkText(content);
-      await storage.createChunks(doc.id, textChunks);
+      const dbChunks = await storage.createChunks(doc.id, textChunks);
 
       res.status(201).json({ ...doc, chunkCount: textChunks.length });
+
+      try {
+        const chunksToIndex = dbChunks.map(c => ({
+          id: c.id,
+          content: c.content,
+          chunkIndex: c.chunkIndex,
+          source: c.source || `${name} — Chunk ${c.chunkIndex + 1}`,
+        }));
+        indexChunks(doc.id, chunksToIndex, (done, total) => {
+          console.log(`[ChromaDB] Indexing document "${name}": ${done}/${total} chunks`);
+        }).then((count) => {
+          console.log(`[ChromaDB] Finished indexing ${count} chunks for "${name}"`);
+        }).catch((err) => {
+          console.error(`[ChromaDB] Failed to index document "${name}":`, err);
+        });
+      } catch (err) {
+        console.error("[ChromaDB] Failed to start indexing:", err);
+      }
     } catch (error) {
       console.error("Error creating document:", error);
       res.status(500).json({ error: "Failed to create document" });
@@ -41,6 +60,11 @@ export async function registerRoutes(
     try {
       const id = parseInt(req.params.id);
       await storage.deleteDocument(id);
+
+      deleteDocumentCollection(id).catch((err) => {
+        console.error(`[ChromaDB] Failed to delete collection for document ${id}:`, err);
+      });
+
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting document:", error);
@@ -124,7 +148,7 @@ export async function registerRoutes(
       if (!query || !documentId) {
         return res.status(400).json({ error: "Query and documentId are required" });
       }
-      const results = await retrieveChunks(documentId, query, topK || 3);
+      const results = await retrieveChunks(documentId, query, topK || 5);
       res.json(results);
     } catch (error) {
       console.error("Error searching:", error);

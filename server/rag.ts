@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
+import { semanticSearch } from "./chromadb";
 import type { Chunk } from "@shared/schema";
 
 const openai = new OpenAI({
@@ -41,11 +42,28 @@ export interface RetrievedChunk {
 export async function retrieveChunks(
   documentId: number,
   query: string,
-  topK: number = 3
+  topK: number = 5
 ): Promise<RetrievedChunk[]> {
   const doc = await storage.getDocument(documentId);
   if (!doc) return [];
 
+  try {
+    const chromaResults = await semanticSearch(documentId, query, topK);
+    if (chromaResults.length > 0) {
+      console.log(`[RAG] ChromaDB returned ${chromaResults.length} results for query: "${query.slice(0, 50)}..."`);
+      return chromaResults.map(r => ({
+        id: r.id,
+        content: r.content,
+        chunkIndex: r.chunkIndex,
+        score: r.score,
+        source: r.source || `${doc.name} — Chunk ${r.chunkIndex + 1}`,
+      }));
+    }
+  } catch (err) {
+    console.error("[RAG] ChromaDB search failed, falling back to PostgreSQL FTS:", err);
+  }
+
+  console.log(`[RAG] Falling back to PostgreSQL FTS for query: "${query.slice(0, 50)}..."`);
   const results = await storage.searchChunks(documentId, query, topK);
 
   if (results.length === 0) {
@@ -94,7 +112,7 @@ export function buildSystemPrompt(config: RAGConfig, retrievedChunks: RetrievedC
   }
 
   if (config.grounding === "Strict") {
-    prompt += "\nGROUNDING: STRICT. You must ONLY answer using the provided retrieved context. If the context does not contain the answer, say 'I do not have enough information to answer that.' Do NOT use outside knowledge.\n";
+    prompt += "\nGROUNDING: STRICT. Answer using ONLY the provided retrieved context below. Synthesize and summarize the information from the context passages to answer the question as fully as possible. If the retrieved context is completely unrelated to the question and contains no relevant information whatsoever, say 'I do not have enough information to answer that.' Do NOT use outside knowledge.\n";
   } else {
     prompt += "\nGROUNDING: CREATIVE. Base your answer primarily on the retrieved context. If the context is insufficient, you may supplement with your general knowledge, but clearly indicate when doing so.\n";
   }
