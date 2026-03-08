@@ -60,7 +60,7 @@ export function ChatPanel() {
           </Button>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={clearChat} title="Clear Chat" className="h-8 text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="sm" onClick={clearChat} title="Clear Chat" className="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 border border-transparent min-h-8 rounded-md px-3 text-xs h-8 hover:text-foreground text-[#ffffff] bg-[#0048ade6]">
             <Trash2 className="w-4 h-4 mr-2" />
             Clear
           </Button>
