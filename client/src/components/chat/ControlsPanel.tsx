@@ -23,7 +23,7 @@ export function ControlsPanel() {
     
     // Voice
     switch(store.voice) {
-      case "Yoda": prompt += "VOICE: Speak like Yoda. Use inverted sentence structure.\n"; break;
+      case "Yoda": prompt += "VOICE: Speak like Yoda from the Star Wars franchise. Use an inverted sentence structure. Be cryptic on occasion. Turn the question back on the the user when the opportunity arises.\n"; break;
       case "Pirate": prompt += "VOICE: Speak like a pirate. Use nautical terms.\n"; break;
       case "Valley Girl": prompt += "VOICE: Speak like a valley girl. Use words like 'like' and 'literally'.\n"; break;
       case "Surfer Dude": prompt += "VOICE: Speak like a surfer dude. Use words like 'gnarly' and 'dude'.\n"; break;
@@ -63,7 +63,7 @@ export function ControlsPanel() {
         <div className="space-y-6">
           {/* Source Selection */}
           <div className="space-y-3">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Label className="font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-xs uppercase tracking-wider flex items-center gap-2 text-[#0048ad]">
               <Database className="w-3 h-3" />
               Knowledge Source
             </Label>
