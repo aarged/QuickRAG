@@ -34,6 +34,11 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
+export const uploadLog = pgTable("upload_log", {
+  id: serial("id").primaryKey(),
+  uploadedAt: timestamp("uploaded_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
 export const insertDocumentSchema = createInsertSchema(documents).omit({ id: true, createdAt: true });
 export const insertChunkSchema = createInsertSchema(chunks).omit({ id: true });
 export const insertConversationSchema = createInsertSchema(conversations).omit({ id: true, createdAt: true });

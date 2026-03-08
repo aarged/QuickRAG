@@ -1,7 +1,7 @@
 import { db } from "./db";
-import { documents, chunks, conversations, messages } from "@shared/schema";
+import { documents, chunks, conversations, messages, uploadLog } from "@shared/schema";
 import type { Document, InsertDocument, Chunk, InsertChunk, Conversation, Message } from "@shared/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, gt, ne } from "drizzle-orm";
 
 export interface IStorage {
   createDocument(doc: InsertDocument): Promise<Document>;
@@ -21,6 +21,10 @@ export interface IStorage {
   createMessage(msg: { conversationId: number; role: string; content: string; chunksUsed?: number }): Promise<Message>;
   getMessagesByConversation(conversationId: number): Promise<Message[]>;
   clearMessages(conversationId: number): Promise<void>;
+
+  logUpload(): Promise<void>;
+  getUploadCountLast24h(): Promise<number>;
+  deleteNonDefaultDocuments(): Promise<number[]>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -137,6 +141,33 @@ class DatabaseStorage implements IStorage {
 
   async clearMessages(conversationId: number): Promise<void> {
     await db.delete(messages).where(eq(messages.conversationId, conversationId));
+  }
+
+  async logUpload(): Promise<void> {
+    await db.insert(uploadLog).values({});
+  }
+
+  async getUploadCountLast24h(): Promise<number> {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(uploadLog)
+      .where(gt(uploadLog.uploadedAt, oneDayAgo));
+    return Number(result[0]?.count || 0);
+  }
+
+  async deleteNonDefaultDocuments(): Promise<number[]> {
+    const nonDefaultDocs = await db
+      .select({ id: documents.id })
+      .from(documents)
+      .where(eq(documents.isDefault, false));
+    const ids = nonDefaultDocs.map(d => d.id);
+    if (ids.length > 0) {
+      for (const id of ids) {
+        await db.delete(documents).where(eq(documents.id, id));
+      }
+    }
+    return ids;
   }
 }
 
