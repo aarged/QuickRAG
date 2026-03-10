@@ -5,6 +5,36 @@ import { chunkText, retrieveChunks, buildSystemPrompt, streamChat, estimateToken
 import { indexChunks, deleteDocumentCollection } from "./chromadb";
 import type { RAGConfig } from "./rag";
 
+function cleanPdfText(raw: string): string {
+  if (!raw) return "";
+
+  const lines = raw.split(/\n/);
+
+  const lineCounts = new Map<string, number>();
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length > 2) {
+      lineCounts.set(trimmed, (lineCounts.get(trimmed) || 0) + 1);
+    }
+  }
+
+  const cleaned = lines
+    .map(line => line.trim())
+    .filter(line => {
+      if (line.length === 0) return true;
+      if (/^\d[\d\s.,]*$/.test(line) && line.length < 20) return false;
+      if (line.length < 3) return false;
+      const count = lineCounts.get(line) || 0;
+      if (count > 5 && line.length < 50) return false;
+      return true;
+    })
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return cleaned;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -58,12 +88,18 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Failed to parse PDF. Please ensure the file is a valid PDF." });
       }
 
-      if (!extractedText || extractedText.trim().length < 50) {
-        return res.status(400).json({ error: "PDF appears to contain no extractable text. Scanned/image PDFs are not supported." });
+      const cleanedText = cleanPdfText(extractedText);
+      const alphaChars = (cleanedText.match(/[a-zA-Z]/g) || []).length;
+      const alphaRatio = cleanedText.length > 0 ? alphaChars / cleanedText.length : 0;
+
+      if (!cleanedText || cleanedText.length < 100 || (alphaRatio < 0.3 && cleanedText.length < 500)) {
+        return res.status(400).json({
+          error: "This PDF contains mostly images, tables, or scanned content with very little extractable text. Text-heavy PDFs work best.",
+        });
       }
 
-      const doc = await storage.createDocument({ name, content: extractedText });
-      const textChunks = chunkText(extractedText);
+      const doc = await storage.createDocument({ name, content: cleanedText });
+      const textChunks = chunkText(cleanedText);
       const dbChunks = await storage.createChunks(doc.id, textChunks);
 
       if (isOwner) {
