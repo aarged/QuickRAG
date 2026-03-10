@@ -46,12 +46,13 @@ export async function registerRoutes(
         }
       }
 
-      const pdfParse = (await import("pdf-parse")).default;
+      const { PDFParse } = await import("pdf-parse");
       let extractedText: string;
 
       try {
-        const pdfData = await pdfParse(pdfBuffer);
-        extractedText = pdfData.text;
+        const pdfUint8 = new Uint8Array(pdfBuffer);
+        const parser = new PDFParse(pdfUint8);
+        extractedText = await parser.getText();
       } catch (pdfErr) {
         console.error("PDF parse error:", pdfErr);
         return res.status(400).json({ error: "Failed to parse PDF. Please ensure the file is a valid PDF." });
