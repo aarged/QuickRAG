@@ -17,6 +17,23 @@ export function ChatPanel() {
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const GUIDE_SEEN_KEY = "quickrag_guide_seen";
+  const [guideActive, setGuideActive] = useState(
+    () => typeof window !== "undefined" && sessionStorage.getItem(GUIDE_SEEN_KEY) !== "true"
+  );
+
+  useEffect(() => {
+    sessionStorage.setItem(GUIDE_SEEN_KEY, "true");
+  }, []);
+
+  useEffect(() => {
+    if (messages.length > 1 && guideActive) {
+      setGuideActive(false);
+    }
+  }, [messages.length, guideActive]);
+
+  const showGuide = guideActive && messages.length === 1;
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -195,6 +212,33 @@ export function ChatPanel() {
               </div>
             </div>
           ))}
+          {showGuide && (
+            <div className="ml-12 mt-2" data-testid="guide-session">
+              <div className="border border-[#0048ad]/20 bg-[#0048ad]/[0.03] rounded-xl p-4 max-w-[80%]">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#0048ad] mb-3">
+                  Getting the best out of RAG
+                </p>
+                <ul className="space-y-2.5 text-sm text-foreground/80 leading-relaxed">
+                  <li>
+                    <span className="font-medium text-foreground">Ask for specifics, not summaries.</span>{" "}
+                    RAG retrieves passages from the source. New to the material? Start with Creative grounding, then switch to Strict for precise, detailed questions.
+                  </li>
+                  <li>
+                    <span className="font-medium text-foreground">Uploading your own document?</span>{" "}
+                    RAG is text-based retrieval — structured data like tables isn't supported.
+                  </li>
+                  <li>
+                    <span className="font-medium text-foreground">Try different Voice and Style settings</span>{" "}
+                    to see how the system prompt shapes each response — clear the chat after switching so the new voice takes effect cleanly.
+                  </li>
+                  <li>
+                    <span className="font-medium text-foreground">Check the Context and Reasoning panels</span>{" "}
+                    to gauge your prompt: Context shows which chunks were surfaced; Reasoning shows the steps taken.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          )}
           {isGenerating && messages[messages.length - 1]?.content === "" && (
             <div className="flex gap-4">
               <div className="w-8 h-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center shrink-0">
