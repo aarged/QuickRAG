@@ -14,6 +14,16 @@
     <meta name="twitter:description" content="A minimalist, lightweight RAG chatbot demonstration app." />
     <meta name="twitter:image" content="https://replit.com/public/images/opengraph.png" />
 
+    <!--
+      Cloudflare Web Analytics (cookieless, no consent banner required).
+      OWNER SETUP: create a free Cloudflare account, add the published URL under
+      "Web Analytics", copy the generated beacon token, and set it as the
+      VITE_CLOUDFLARE_BEACON_TOKEN environment variable (the %VITE_...% below is
+      replaced at build time by Vite). Until a real token is supplied, the beacon
+      will simply not report any data.
+    -->
+    <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "%VITE_CLOUDFLARE_BEACON_TOKEN%"}'></script>
+
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

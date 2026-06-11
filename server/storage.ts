@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { documents, chunks, conversations, messages, uploadLog } from "@shared/schema";
-import type { Document, InsertDocument, Chunk, InsertChunk, Conversation, Message } from "@shared/schema";
+import { documents, chunks, conversations, messages, uploadLog, events } from "@shared/schema";
+import type { Document, InsertDocument, Chunk, InsertChunk, Conversation, Message, Event, InsertEvent } from "@shared/schema";
 import { eq, desc, sql, gt, ne } from "drizzle-orm";
 
 // Fixed key for the transaction-scoped advisory lock that serializes daily
@@ -36,6 +36,11 @@ export interface IStorage {
     enforceLimit: boolean,
   ): Promise<{ status: "ok"; doc: Document; chunks: Chunk[] } | { status: "limit" }>;
   deleteNonDefaultDocuments(): Promise<number[]>;
+
+  logEvent(event: InsertEvent): Promise<void>;
+  getUniqueVisitorCount(): Promise<number>;
+  getEventCountsByType(): Promise<{ eventType: string; count: number }[]>;
+  getRecentEvents(limit?: number): Promise<Event[]>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -238,6 +243,33 @@ class DatabaseStorage implements IStorage {
       }
     }
     return ids;
+  }
+
+  async logEvent(event: InsertEvent): Promise<void> {
+    await db.insert(events).values(event);
+  }
+
+  async getUniqueVisitorCount(): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(distinct ${events.visitorId})` })
+      .from(events);
+    return Number(result[0]?.count || 0);
+  }
+
+  async getEventCountsByType(): Promise<{ eventType: string; count: number }[]> {
+    const result = await db
+      .select({
+        eventType: events.eventType,
+        count: sql<number>`count(*)`,
+      })
+      .from(events)
+      .groupBy(events.eventType)
+      .orderBy(desc(sql`count(*)`));
+    return result.map((r) => ({ eventType: r.eventType, count: Number(r.count) }));
+  }
+
+  async getRecentEvents(limit: number = 50): Promise<Event[]> {
+    return db.select().from(events).orderBy(desc(events.createdAt)).limit(limit);
   }
 }
 

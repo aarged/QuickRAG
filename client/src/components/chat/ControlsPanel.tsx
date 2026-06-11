@@ -16,6 +16,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { GuideContent, GUIDE_TITLE } from "./GuideContent";
+import { track } from "@/lib/analytics";
 
 const DISMISS_KEY = "quickrag_upload_warning_dismissed";
 
@@ -111,6 +112,7 @@ export function ControlsPanel() {
       }
 
       const doc = await res.json();
+      track("upload", { documentId: doc.id, chunkCount: doc.chunkCount });
       await fetchDocuments();
       store.setDocumentSource("user");
       store.setActiveDocumentId(doc.id);

@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { chunkText, retrieveChunks, buildSystemPrompt, streamChat, estimateTokens } from "./rag";
 import { indexChunks, deleteDocumentCollection } from "./chromadb";
 import type { RAGConfig } from "./rag";
+import { insertEventSchema } from "@shared/schema";
 
 function cleanPdfText(raw: string): string {
   if (!raw) return "";
@@ -169,11 +170,12 @@ export async function registerRoutes(
 
   app.post("/api/chat", async (req, res) => {
     try {
-      const { message, documentId, config, history } = req.body as {
+      const { message, documentId, config, history, visitorId } = req.body as {
         message: string;
         documentId: number;
         config: RAGConfig;
         history: { role: "user" | "assistant"; content: string }[];
+        visitorId?: string;
       };
 
       if (!message) {
@@ -183,6 +185,21 @@ export async function registerRoutes(
       const retrievedChunks = documentId
         ? await retrieveChunks(documentId, message)
         : [];
+
+      // A chat message against a document triggers a semantic search/retrieval.
+      // Log it as a distinct "search" event tied to the anonymous visitor (the
+      // client-side "chat" event still records the message send itself).
+      if (documentId && visitorId) {
+        storage
+          .logEvent({
+            visitorId,
+            eventType: "search",
+            metadata: JSON.stringify({ documentId, results: retrievedChunks.length }),
+            path: null,
+            referrer: null,
+          })
+          .catch((err) => console.error("Failed to log search event:", err));
+      }
 
       const systemPrompt = buildSystemPrompt(config || { grounding: "Strict", voice: "Standard", style: "Standard" }, retrievedChunks);
 
@@ -234,10 +251,63 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Query and documentId are required" });
       }
       const results = await retrieveChunks(documentId, query, topK || 5);
+
+      const visitorId = (req.body?.visitorId as string | undefined) || (req.headers["x-visitor-id"] as string | undefined);
+      if (visitorId) {
+        storage
+          .logEvent({
+            visitorId,
+            eventType: "search",
+            metadata: JSON.stringify({ documentId, results: results.length }),
+            path: null,
+            referrer: null,
+          })
+          .catch((err) => console.error("Failed to log search event:", err));
+      }
+
       res.json(results);
     } catch (error) {
       console.error("Error searching:", error);
       res.status(500).json({ error: "Failed to search" });
+    }
+  });
+
+  // Anonymous in-app event ingest. Fire-and-forget from the client: a failed
+  // event log must never break the user's action, so we still return 204 on
+  // validation/storage errors.
+  app.post("/api/events", async (req, res) => {
+    try {
+      const parsed = insertEventSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(204).send();
+      }
+      await storage.logEvent(parsed.data);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Failed to log event:", error);
+      res.status(204).send();
+    }
+  });
+
+  // Owner-only analytics stats. Gated by the existing OWNER_PIN, sent via the
+  // X-Owner-Pin header (same mechanism as the upload-limit override).
+  app.get("/api/stats", async (req, res) => {
+    try {
+      const ownerPin = req.headers["x-owner-pin"] as string | undefined;
+      if (!process.env.OWNER_PIN || !ownerPin || ownerPin !== process.env.OWNER_PIN) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const [uniqueVisitors, countsByType, recentEvents] = await Promise.all([
+        storage.getUniqueVisitorCount(),
+        storage.getEventCountsByType(),
+        storage.getRecentEvents(50),
+      ]);
+
+      res.json({ uniqueVisitors, countsByType, recentEvents });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      res.status(500).json({ error: "Failed to fetch stats" });
     }
   });
 

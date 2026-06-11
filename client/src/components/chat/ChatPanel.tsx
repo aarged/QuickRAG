@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, User, ChevronLeft, ChevronRight } from "lucide-react";
 import { GuideContent, GUIDE_TITLE } from "./GuideContent";
+import { track, getVisitorId } from "@/lib/analytics";
 
 export function ChatPanel() {
   const {
@@ -48,6 +49,7 @@ export function ChatPanel() {
     addMessage({ role: "user", content: userMessage });
     setInput("");
     setIsGenerating(true);
+    track("chat", { documentId: activeDocumentId });
 
     setPipelineSteps([
       { step: 1, label: "Query Analysis", detail: "Parsing user query", status: "active" },
@@ -71,6 +73,7 @@ export function ChatPanel() {
           documentId: activeDocumentId,
           config: { grounding, voice, style },
           history,
+          visitorId: getVisitorId(),
         }),
       });
 
