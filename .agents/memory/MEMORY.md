@@ -1,0 +1,1 @@
+- [pdf-parse getText returns TextResult](pdf-parse-gettext.md) — `getText()` resolves to a `TextResult` object, not a string; use `.text` or downstream string ops throw.

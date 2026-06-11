@@ -64,16 +64,7 @@ export async function registerRoutes(
 
       const MAX_PDF_SIZE = 10 * 1024 * 1024;
       if (pdfBuffer.length > MAX_PDF_SIZE) {
-        return res.status(400).json({ error: "PDF exceeds 10MB size limit." });
-      }
-
-      if (!isOwner) {
-        const logged = await storage.tryLogUploadAtomic();
-        if (!logged) {
-          return res.status(429).json({
-            error: "Upload limit reached (1 per day). Try again tomorrow.",
-          });
-        }
+        return res.status(400).json({ error: "This PDF is larger than the 10MB limit. Please upload a smaller file." });
       }
 
       const { PDFParse } = await import("pdf-parse");
@@ -82,10 +73,11 @@ export async function registerRoutes(
       try {
         const pdfUint8 = new Uint8Array(pdfBuffer);
         const parser = new PDFParse(pdfUint8);
-        extractedText = await parser.getText();
+        const textResult = await parser.getText();
+        extractedText = textResult.text;
       } catch (pdfErr) {
         console.error("PDF parse error:", pdfErr);
-        return res.status(400).json({ error: "Failed to parse PDF. Please ensure the file is a valid PDF." });
+        return res.status(400).json({ error: "We couldn't read this file as a PDF. Please make sure it's a valid, unencrypted PDF." });
       }
 
       const cleanedText = cleanPdfText(extractedText);
@@ -94,17 +86,30 @@ export async function registerRoutes(
 
       if (!cleanedText || cleanedText.length < 100 || (alphaRatio < 0.3 && cleanedText.length < 500)) {
         return res.status(400).json({
-          error: "This PDF contains mostly images, tables, or scanned content with very little extractable text. Text-heavy PDFs work best.",
+          error: "This PDF is mostly images, tables, or scanned pages, so there's too little text to use. Text-based PDFs work best.",
         });
       }
 
-      const doc = await storage.createDocument({ name, content: cleanedText });
+      // Reserve the daily slot, create the document, and persist its chunks in a
+      // single transaction (only after the PDF has passed validation). A rejected
+      // file never reaches this point, and if persistence fails the slot is rolled
+      // back — so only successful uploads consume a non-owner's daily upload.
       const textChunks = chunkText(cleanedText);
-      const dbChunks = await storage.createChunks(doc.id, textChunks);
+      const result = await storage.createDocumentWithSlot(
+        { name, content: cleanedText },
+        textChunks,
+        undefined,
+        !isOwner,
+      );
 
-      if (isOwner) {
-        await storage.logUpload();
+      if (result.status === "limit") {
+        return res.status(429).json({
+          error: "Upload limit reached (1 per day). Try again tomorrow.",
+        });
       }
+
+      const doc = result.doc;
+      const dbChunks = result.chunks;
 
       res.status(201).json({ ...doc, chunkCount: textChunks.length });
 

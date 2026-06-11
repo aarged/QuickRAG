@@ -3,6 +3,10 @@ import { documents, chunks, conversations, messages, uploadLog } from "@shared/s
 import type { Document, InsertDocument, Chunk, InsertChunk, Conversation, Message } from "@shared/schema";
 import { eq, desc, sql, gt, ne } from "drizzle-orm";
 
+// Fixed key for the transaction-scoped advisory lock that serializes daily
+// upload-slot reservations (see createDocumentWithSlot).
+const UPLOAD_SLOT_LOCK_KEY = 728931;
+
 export interface IStorage {
   createDocument(doc: InsertDocument): Promise<Document>;
   getDocument(id: number): Promise<Document | undefined>;
@@ -25,6 +29,12 @@ export interface IStorage {
   logUpload(): Promise<void>;
   getUploadCountLast24h(): Promise<number>;
   tryLogUploadAtomic(): Promise<boolean>;
+  createDocumentWithSlot(
+    doc: InsertDocument,
+    texts: string[],
+    sourceLabels: string[] | undefined,
+    enforceLimit: boolean,
+  ): Promise<{ status: "ok"; doc: Document; chunks: Chunk[] } | { status: "limit" }>;
   deleteNonDefaultDocuments(): Promise<number[]>;
 }
 
@@ -166,6 +176,54 @@ class DatabaseStorage implements IStorage {
       RETURNING id
     `);
     return (result as any).length > 0 || (result as any).rowCount > 0;
+  }
+
+  async createDocumentWithSlot(
+    doc: InsertDocument,
+    texts: string[],
+    sourceLabels: string[] | undefined,
+    enforceLimit: boolean,
+  ): Promise<{ status: "ok"; doc: Document; chunks: Chunk[] } | { status: "limit" }> {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    return db.transaction(async (tx) => {
+      // Serialize concurrent upload reservations with a transaction-scoped
+      // advisory lock so the count-check + insert below cannot race (two
+      // callers both reading count=0 and each inserting a row). The lock is
+      // released automatically when the transaction commits or rolls back.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${UPLOAD_SLOT_LOCK_KEY})`);
+
+      // Reserve the daily slot inside the transaction. When enforcing the
+      // limit, the insert only succeeds if under the daily cap; otherwise
+      // (owner uploads) the row is always inserted for tracking. If document
+      // or chunk persistence fails below, the whole transaction — including
+      // this slot reservation — rolls back, so only successful uploads count.
+      const reserve = enforceLimit
+        ? await tx.execute(sql`
+            INSERT INTO upload_log (uploaded_at)
+            SELECT NOW()
+            WHERE (SELECT COUNT(*) FROM upload_log WHERE uploaded_at > ${oneDayAgo}) < 1
+            RETURNING id
+          `)
+        : await tx.execute(sql`
+            INSERT INTO upload_log (uploaded_at)
+            SELECT NOW()
+            RETURNING id
+          `);
+      const reserved = (reserve as any).length > 0 || (reserve as any).rowCount > 0;
+      if (enforceLimit && !reserved) {
+        return { status: "limit" as const };
+      }
+
+      const [createdDoc] = await tx.insert(documents).values(doc).returning();
+      const values = texts.map((content, i) => ({
+        documentId: createdDoc.id,
+        content,
+        chunkIndex: i,
+        source: sourceLabels?.[i] || null,
+      }));
+      const createdChunks = await tx.insert(chunks).values(values).returning();
+      return { status: "ok" as const, doc: createdDoc, chunks: createdChunks };
+    });
   }
 
   async deleteNonDefaultDocuments(): Promise<number[]> {
