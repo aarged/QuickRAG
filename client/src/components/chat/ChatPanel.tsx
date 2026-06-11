@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, User, ChevronLeft, ChevronRight } from "lucide-react";
+import { GuideContent, GUIDE_TITLE } from "./GuideContent";
 
 export function ChatPanel() {
   const {
@@ -216,26 +217,9 @@ export function ChatPanel() {
             <div className="ml-12 mt-2" data-testid="guide-session">
               <div className="border border-[#0048ad]/20 bg-[#0048ad]/[0.03] rounded-xl p-4 max-w-[80%]">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#0048ad] mb-3">
-                  Getting the best out of RAG
+                  {GUIDE_TITLE}
                 </p>
-                <ul className="space-y-2.5 text-sm text-foreground/80 leading-relaxed">
-                  <li>
-                    <span className="font-medium text-foreground">Ask for specifics, not summaries.</span>{" "}
-                    RAG retrieves passages from the source. New to the material? Start with Creative grounding, then switch to Strict for precise, detailed questions.
-                  </li>
-                  <li>
-                    <span className="font-medium text-foreground">Uploading your own document?</span>{" "}
-                    RAG is text-based retrieval — structured data like tables isn't supported.
-                  </li>
-                  <li>
-                    <span className="font-medium text-foreground">Try different Voice and Style settings</span>{" "}
-                    to see how the system prompt shapes each response — clear the chat after switching so the new voice takes effect cleanly.
-                  </li>
-                  <li>
-                    <span className="font-medium text-foreground">Check the Context and Reasoning panels</span>{" "}
-                    to gauge your prompt: Context shows which chunks were surfaced; Reasoning shows the steps taken.
-                  </li>
-                </ul>
+                <GuideContent />
               </div>
             </div>
           )}

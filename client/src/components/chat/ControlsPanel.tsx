@@ -12,6 +12,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { GuideContent, GUIDE_TITLE } from "./GuideContent";
 
 const DISMISS_KEY = "quickrag_upload_warning_dismissed";
 
@@ -24,6 +28,7 @@ export function ControlsPanel() {
   const [ownerPin, setOwnerPin] = useState("");
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showGuideDialog, setShowGuideDialog] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -211,6 +216,15 @@ export function ControlsPanel() {
       </div>
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-6">
+          <Button
+            variant="outline"
+            onClick={() => setShowGuideDialog(true)}
+            className="w-full border-[#0048ad] text-[#0048ad] hover:bg-[#0048ad]/5 hover:text-[#0048ad]"
+            data-testid="button-guide"
+          >
+            Guide
+          </Button>
+
           <div className="space-y-3">
             <Label className="font-medium text-xs uppercase tracking-wider flex items-center gap-2 text-[#0048ad]">
               Source
@@ -471,6 +485,15 @@ export function ControlsPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={showGuideDialog} onOpenChange={setShowGuideDialog}>
+        <DialogContent className="max-w-lg" data-testid="dialog-guide">
+          <DialogHeader>
+            <DialogTitle className="text-[#0048ad]">{GUIDE_TITLE}</DialogTitle>
+          </DialogHeader>
+          <GuideContent />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
