@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { uploadLimiter } from "./rateLimit";
 
 const app = express();
 const httpServer = createServer(app);
@@ -12,16 +13,34 @@ declare module "http" {
   }
 }
 
-app.use(
-  express.json({
-    limit: "50mb",
-    verify: (req, _res, buf) => {
-      req.rawBody = buf;
-    },
-  }),
-);
+// Behind Replit's proxy the real client IP arrives via X-Forwarded-For. Trust
+// the first proxy hop so per-IP rate limiting keys on the actual visitor rather
+// than the proxy. (Use a numeric hop count, not `true`, which express-rate-limit
+// rejects as too permissive.)
+app.set("trust proxy", 1);
 
-app.use(express.urlencoded({ extended: false, limit: "50mb" }));
+const captureRawBody = (req: any, _res: any, buf: Buffer) => {
+  req.rawBody = buf;
+};
+
+// Rate-limit upload attempts BEFORE the 50MB body parser runs, so an over-limit
+// request is rejected without the server first parsing a large payload. Only
+// POST (the actual upload) is throttled; GET/DELETE on documents pass through.
+app.use("/api/documents", (req, res, next) => {
+  if (req.method === "POST") return uploadLimiter(req, res, next);
+  next();
+});
+
+// Only the PDF upload route needs a large body. Everything else (chat, search,
+// events) is capped tightly so a single request can't carry a huge payload and
+// drive up OpenAI token cost or flood storage. The 50MB parser is mounted on the
+// document routes first; it marks the body as parsed so the small global parser
+// below skips it.
+app.use("/api/documents", express.json({ limit: "50mb", verify: captureRawBody }));
+
+app.use(express.json({ limit: "100kb", verify: captureRawBody }));
+
+app.use(express.urlencoded({ extended: false, limit: "100kb" }));
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

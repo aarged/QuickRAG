@@ -36,6 +36,7 @@ export interface IStorage {
     enforceLimit: boolean,
   ): Promise<{ status: "ok"; doc: Document; chunks: Chunk[] } | { status: "limit" }>;
   deleteNonDefaultDocuments(): Promise<number[]>;
+  getNonDefaultDocumentCount(): Promise<number>;
 
   logEvent(event: InsertEvent): Promise<void>;
   getUniqueVisitorCount(): Promise<number>;
@@ -243,6 +244,14 @@ class DatabaseStorage implements IStorage {
       }
     }
     return ids;
+  }
+
+  async getNonDefaultDocumentCount(): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(documents)
+      .where(eq(documents.isDefault, false));
+    return Number(result[0]?.count || 0);
   }
 
   async logEvent(event: InsertEvent): Promise<void> {

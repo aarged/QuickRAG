@@ -1,2 +1,3 @@
 - [pdf-parse getText returns TextResult](pdf-parse-gettext.md) — `getText()` resolves to a `TextResult` object, not a string; use `.text` or downstream string ops throw.
 - [ChromaDB default-embed warnings](chromadb-default-embed-warnings.md) — DefaultEmbeddingFunction errors are harmless when you pass embeddings directly; tenant must be a 36-char UUID or auth 403s.
+- [express-rate-limit + body-parser order](express-ratelimit-bodyparser-order.md) — rate-limit big-body routes app-level BEFORE the parser; `trust proxy` must be numeric (1), not `true`.

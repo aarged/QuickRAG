@@ -56,6 +56,26 @@ A full-stack RAG (Retrieval-Augmented Generation) chatbot demo built with React 
 - Owner override: `X-Owner-Pin` header matching `OWNER_PIN` env secret bypasses rate limit
 - Upload warning dialog with optional PIN input and "Don't show again" (localStorage)
 
+## Abuse & Cost Protections
+
+Hardening for public/anonymous exposure (e.g. shared on LinkedIn):
+
+- **Per-IP rate limiting** (`server/rateLimit.ts`, via `express-rate-limit`):
+  - `/api/chat`: 15/min · `/api/search`: 20/min · `/api/documents` (upload): 5/min · `/api/events`: 60/min
+  - Over-limit requests get HTTP 429 with a clear message. `X-Owner-Pin` matching `OWNER_PIN` bypasses all limits.
+  - `app.set("trust proxy", 1)` in `server/index.ts` so limits key on the real client IP behind Replit's proxy.
+- **Input caps** (`server/routes.ts`, enforced before any OpenAI call): chat message ≤ 4000 chars; history ≤ 20 most-recent turns, each ≤ 4000 chars; search query ≤ 1000 chars; `topK` clamped to 1–10.
+- **Body-size scoping** (`server/index.ts`): global JSON limit reduced to 100kb; the 50MB limit applies only to the `/api/documents` upload route.
+- **Upload ceiling**: existing 1-per-24h global limit (atomic, in `createDocumentWithSlot`) **plus** a hard cap of 10 concurrent non-default documents (`getNonDefaultDocumentCount`). Tradeoff note: the daily limit is intentionally *global* (simple, strong cost cap) rather than per-IP, so one uploader blocks others for the demo window — acceptable for a demo; switch to a per-IP key if multi-user uploads are needed.
+- **Events firehose bounding**: `/api/events` is rate-limited and drops oversized payloads (fields ≤ 512 chars, metadata ≤ 2000) while keeping fire-and-forget 204 behavior. `visitorId` is client-supplied (spoofable) — analytics are indicative, not authoritative.
+- **Owner-only data endpoints**: `GET /api/documents/:id/chunks` (raw text dump) now requires `OWNER_PIN`; the app UI never calls it. `DELETE /api/documents/:id` stays open (the UI needs it; docs are ephemeral) but default docs remain undeletable.
+
+### Operational backstops (configure outside code)
+
+- Set a **hard monthly usage limit + alerts** in the OpenAI dashboard — the ultimate spend cap if any in-app limit is bypassed.
+- Ensure **`OWNER_PIN` is set** in the deployment environment — the owner upload/rate-limit bypass and `/api/stats` page both depend on it (if unset, no owner bypass exists and `/api/stats` always returns 401).
+- Choose deployment type deliberately: **Reserved VM** caps compute cost under attack; **Autoscale** scales up (cost) under a request flood.
+
 ## Session-Ephemeral Documents
 
 - User-uploaded documents (isDefault=false) are automatically deleted on server restart
