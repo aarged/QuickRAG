@@ -8,7 +8,7 @@ A full-stack RAG (Retrieval-Augmented Generation) chatbot demo built with React 
 - **Backend**: Express on port 5000, serves API + Vite dev middleware
 - **Database**: PostgreSQL via Drizzle ORM (document/chunk storage, metadata, upload rate limiting)
 - **Vector Search**: ChromaDB Cloud via `CloudClient` + OpenAI `text-embedding-3-small` embeddings (Cyntric pattern — pre-computed embeddings, ChromaDB built-in embedding disabled)
-- **AI Chat**: OpenAI GPT-4o-mini via Replit AI Integrations (env vars `AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_OPENAI_BASE_URL`)
+- **AI Chat**: OpenAI GPT-5-mini via Replit AI Integrations (env vars `AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_OPENAI_BASE_URL`)
 - **Embeddings**: OpenAI `text-embedding-3-small` via direct `OPENAI_API_KEY` (not AI Integrations — embeddings API not supported there)
 - **Retrieval**: Semantic vector search via ChromaDB Cloud, with PostgreSQL FTS as graceful fallback
 
@@ -19,7 +19,7 @@ A full-stack RAG (Retrieval-Augmented Generation) chatbot demo built with React 
 - `CHROMADB_TENANT` — ChromaDB Cloud tenant
 - `CHROMADB_DATABASE` — ChromaDB Cloud database
 - `OWNER_PIN` — owner override PIN for bypassing upload rate limits
-- AI Integrations provides `AI_INTEGRATIONS_OPENAI_API_KEY` and `AI_INTEGRATIONS_OPENAI_BASE_URL` for GPT-4o-mini chat
+- AI Integrations provides `AI_INTEGRATIONS_OPENAI_API_KEY` and `AI_INTEGRATIONS_OPENAI_BASE_URL` for GPT-5-mini chat
 
 ## Key Files
 

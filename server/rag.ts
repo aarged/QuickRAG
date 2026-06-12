@@ -142,10 +142,10 @@ export async function* streamChat(
   ];
 
   const stream = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-5-mini",
     messages: messagesForApi,
     stream: true,
-    max_tokens: 2048,
+    max_completion_tokens: 4096,
   });
 
   for await (const chunk of stream) {

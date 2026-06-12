@@ -186,7 +186,7 @@ export function DebugPanel() {
                           <div className="w-5 h-5 rounded bg-secondary text-muted-foreground flex items-center justify-center shrink-0 mt-0.5 text-xs font-mono">4</div>
                           <div>
                             <p className="text-xs font-medium">Generation</p>
-                            <p className="text-[10px] text-muted-foreground">gpt-4o-mini streaming response</p>
+                            <p className="text-[10px] text-muted-foreground">gpt-5-mini streaming response</p>
                           </div>
                         </div>
                       </>

@@ -55,7 +55,7 @@ export function ChatPanel() {
       { step: 1, label: "Query Analysis", detail: "Parsing user query", status: "active" },
       { step: 2, label: "Chunk Retrieval", detail: "Searching document via full-text search", status: "pending" },
       { step: 3, label: "Prompt Assembly", detail: "Building system prompt with context", status: "pending" },
-      { step: 4, label: "Generation", detail: "gpt-4o-mini streaming response", status: "pending" },
+      { step: 4, label: "Generation", detail: "gpt-5-mini streaming response", status: "pending" },
     ]);
 
     const history = messages
