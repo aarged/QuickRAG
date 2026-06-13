@@ -3,6 +3,7 @@ import { documents, chunks } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { indexChunks, getCollectionCount } from "./chromadb";
 import type { ChunkToIndex } from "./chromadb";
+import { seedWarAndPeace } from "./seed-war-and-peace";
 
 const CHUNK_SIZE = 800;
 const OVERLAP = 100;
@@ -362,15 +363,25 @@ export async function ensureDefaultLibrary(): Promise<void> {
       return;
     }
 
-    const bookFailures = await seedAllBooks();
+    const seedFailures: string[] = [];
+    // War and Peace keeps its dedicated parser (not the generic BOOKS manifest), so
+    // seed it explicitly first; both it and the generic books are idempotent (skip-by-name).
+    try {
+      await seedWarAndPeace();
+    } catch (err) {
+      console.error("[bootstrap] failed to seed War and Peace:", err);
+      seedFailures.push("War and Peace — Leo Tolstoy");
+    }
+    seedFailures.push(...(await seedAllBooks()));
+    // indexAllDefaults indexes every isDefault doc (War and Peace included).
     const indexFailures = await indexAllDefaults();
 
-    if (bookFailures.length === 0 && indexFailures.length === 0) {
+    if (seedFailures.length === 0 && indexFailures.length === 0) {
       console.log("[bootstrap] default library ready.");
     } else {
       console.warn(
         `[bootstrap] default library bootstrap completed with issues — ` +
-          `seed failures: [${bookFailures.join(", ")}], index failures: [${indexFailures.join(", ")}]. ` +
+          `seed failures: [${seedFailures.join(", ")}], index failures: [${indexFailures.join(", ")}]. ` +
           `Will retry on next restart.`,
       );
     }
