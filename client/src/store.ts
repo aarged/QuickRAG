@@ -105,7 +105,7 @@ export const useAppStore = create<AppState>((set) => ({
     {
       id: "welcome",
       role: "assistant",
-      content: "Welcome to QuickRag. Upload a document or select an existing one, then ask me anything about it.",
+      content: "Welcome to QuickRAG. Upload a document or select an existing one, then ask me about it.",
       timestamp: Date.now(),
     }
   ],
@@ -124,7 +124,7 @@ export const useAppStore = create<AppState>((set) => ({
     messages: [{
       id: "welcome",
       role: "assistant",
-      content: "Welcome to QuickRag. Upload a document or select an existing one, then ask me anything about it.",
+      content: "Welcome to QuickRAG. Upload a document or select an existing one, then ask me about it.",
       timestamp: Date.now(),
     }],
     lastRetrievedChunks: [],
