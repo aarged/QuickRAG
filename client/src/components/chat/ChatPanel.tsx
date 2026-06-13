@@ -64,6 +64,9 @@ export function ChatPanel() {
       .slice(-10)
       .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
 
+    let fullContent = "";
+    let assistantAdded = false;
+
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -85,8 +88,6 @@ export function ChatPanel() {
       if (!reader) throw new Error("No response stream");
 
       const decoder = new TextDecoder();
-      let fullContent = "";
-      let assistantAdded = false;
       let buffer = "";
 
       updatePipelineStep(1, "done");
@@ -157,6 +158,9 @@ export function ChatPanel() {
     } catch (err) {
       addMessage({ role: "assistant", content: "Failed to connect to the server. Please try again." });
     } finally {
+      if (assistantAdded && fullContent === "") {
+        updateLastAssistantContent("I couldn't generate a response. Please try again.");
+      }
       setIsGenerating(false);
     }
   };
@@ -191,7 +195,7 @@ export function ChatPanel() {
       </div>
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         <div className="space-y-6 max-w-3xl mx-auto pb-4">
-          {messages.map((msg) => (
+          {messages.filter((msg) => msg.content !== "").map((msg) => (
             <div
               key={msg.id}
               className={`flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
