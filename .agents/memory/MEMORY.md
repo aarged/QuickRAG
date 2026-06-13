@@ -2,3 +2,4 @@
 - [ChromaDB default-embed warnings](chromadb-default-embed-warnings.md) — DefaultEmbeddingFunction errors are harmless when you pass embeddings directly; tenant must be a 36-char UUID or auth 403s.
 - [express-rate-limit + body-parser order](express-ratelimit-bodyparser-order.md) — rate-limit big-body routes app-level BEFORE the parser; `trust proxy` must be numeric (1), not `true`.
 - [Generic Gutenberg seeding](gutenberg-seed-parsing.md) — one config-driven parser across book layouts; raw-line heading regex, blank-surround, case rules, CRLF normalize, foreground idempotent indexing.
+- [Production data seeding](prod-data-seeding.md) — prod DB is separate from dev; publish syncs code/schema not data; seed defaults via idempotent startup bootstrap (advisory-lock guarded), not dev-only scripts.

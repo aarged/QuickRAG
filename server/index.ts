@@ -139,6 +139,18 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+
+      // Ensure the default book library exists in this environment's database and
+      // is indexed in ChromaDB. Runs non-blocking AFTER the server is listening so
+      // it never delays startup or trips deployment health checks. Idempotent:
+      // already-seeded books and already-indexed collections are skipped cheaply.
+      // This is what populates the production database (separate from development;
+      // publishing syncs code/schema but not data rows) on first boot after deploy.
+      import("./seed-defaults")
+        .then(({ ensureDefaultLibrary }) => ensureDefaultLibrary())
+        .catch((err) => {
+          console.error("[bootstrap] failed to start default library bootstrap:", err);
+        });
     },
   );
 })();
