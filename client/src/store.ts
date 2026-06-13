@@ -12,7 +12,7 @@ export type Message = {
 };
 
 export type GroundingMode = "Strict" | "Creative";
-export type Voice = "Standard" | "Yoda" | "Pirate" | "Valley Girl" | "Surfer Dude" | "Snarky Comic";
+export type Voice = "Standard" | "Yoda" | "Pirate" | "Valley Girl" | "Surfer Dude";
 export type Style = "Terse" | "Standard" | "Verbose";
 
 export type RetrievedChunk = {

@@ -101,7 +101,6 @@ export function buildSystemPrompt(config: RAGConfig, retrievedChunks: RetrievedC
     case "Pirate": prompt += "VOICE: Speak like a pirate. Use nautical terms.\n"; break;
     case "Valley Girl": prompt += "VOICE: Speak like a valley girl. Use words like 'like' and 'literally'.\n"; break;
     case "Surfer Dude": prompt += "VOICE: Speak like a surfer dude. Use words like 'gnarly' and 'dude'.\n"; break;
-    case "Snarky Comic": prompt += "VOICE: Be sarcastic and slightly condescending, but helpful.\n"; break;
     default: prompt += "VOICE: Use a standard, helpful, professional tone.\n";
   }
 
