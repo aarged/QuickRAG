@@ -4,65 +4,72 @@ import { eq } from "drizzle-orm";
 import { indexChunks, getCollectionCount } from "./chromadb";
 import type { ChunkToIndex } from "./chromadb";
 
-async function seed() {
-  console.log("Looking for War and Peace document in PostgreSQL...");
-  const docs = await db.select().from(documents);
-  const warAndPeace = docs.find(d => d.name.includes("War and Peace"));
+async function indexDocument(docId: number, docName: string): Promise<void> {
+  const existingCount = await getCollectionCount(docId);
+  const allChunks = await db
+    .select()
+    .from(chunks)
+    .where(eq(chunks.documentId, docId))
+    .orderBy(chunks.chunkIndex);
 
-  if (!warAndPeace) {
-    console.error("War and Peace document not found in database. Run seed-war-and-peace.ts first.");
-    process.exit(1);
+  console.log(`\n"${docName}" (id ${docId}): PostgreSQL ${allChunks.length} chunks, ChromaDB ${existingCount} items.`);
+
+  if (allChunks.length === 0) {
+    console.log("  No chunks to index. Skipping.");
+    return;
   }
-
-  console.log(`Found document: "${warAndPeace.name}" (id: ${warAndPeace.id})`);
-
-  const existingCount = await getCollectionCount(warAndPeace.id);
-  const allChunks = await db.select().from(chunks).where(eq(chunks.documentId, warAndPeace.id)).orderBy(chunks.chunkIndex);
-  console.log(`PostgreSQL has ${allChunks.length} chunks.`);
-  console.log(`ChromaDB collection has ${existingCount} items.`);
 
   if (existingCount >= allChunks.length) {
-    console.log("ChromaDB already has all chunks indexed. Skipping.");
-    process.exit(0);
+    console.log("  Already fully indexed. Skipping.");
+    return;
   }
 
-  let chunksToIndex: ChunkToIndex[];
-
+  const remaining = existingCount > 0 ? allChunks.slice(existingCount) : allChunks;
   if (existingCount > 0) {
-    console.log(`ChromaDB has partial data (${existingCount}/${allChunks.length}). Resuming from chunk ${existingCount}...`);
-    chunksToIndex = allChunks.slice(existingCount).map(c => ({
-      id: c.id,
-      content: c.content,
-      chunkIndex: c.chunkIndex,
-      source: c.source || `Chunk ${c.chunkIndex + 1}`,
-    }));
-  } else {
-    chunksToIndex = allChunks.map(c => ({
-      id: c.id,
-      content: c.content,
-      chunkIndex: c.chunkIndex,
-      source: c.source || `Chunk ${c.chunkIndex + 1}`,
-    }));
+    console.log(`  Partial data (${existingCount}/${allChunks.length}). Resuming from chunk ${existingCount}...`);
   }
 
-  console.log(`Indexing ${chunksToIndex.length} remaining chunks into ChromaDB Cloud...`);
-  console.log("(This will generate OpenAI embeddings in batches — may take several minutes)");
+  const chunksToIndex: ChunkToIndex[] = remaining.map((c) => ({
+    id: c.id,
+    content: c.content,
+    chunkIndex: c.chunkIndex,
+    source: c.source || `Chunk ${c.chunkIndex + 1}`,
+  }));
 
+  console.log(`  Indexing ${chunksToIndex.length} chunks into ChromaDB Cloud (generating OpenAI embeddings)...`);
   const startTime = Date.now();
 
-  const indexed = await indexChunks(warAndPeace.id, chunksToIndex, (done, total) => {
+  const indexed = await indexChunks(docId, chunksToIndex, (done, total) => {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
     const rate = (done / parseFloat(elapsed || "1")).toFixed(1);
-    console.log(`  ${done}/${total} chunks indexed (${elapsed}s elapsed, ~${rate} chunks/sec)`);
+    console.log(`    ${done}/${total} chunks indexed (${elapsed}s elapsed, ~${rate} chunks/sec)`);
   });
 
   const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
-  console.log(`\nDone! Indexed ${indexed} chunks in ${totalTime}s.`);
+  const finalCount = await getCollectionCount(docId);
+  console.log(`  Done: indexed ${indexed} chunks in ${totalTime}s. Collection now has ${finalCount} items.`);
+}
 
-  const finalCount = await getCollectionCount(warAndPeace.id);
-  console.log(`ChromaDB collection now has ${finalCount} items.`);
+async function seed() {
+  console.log("Indexing default documents into ChromaDB Cloud...");
+  const docs = await db.select().from(documents).where(eq(documents.isDefault, true));
 
-  process.exit(0);
+  if (docs.length === 0) {
+    console.error("No default documents found. Run seed-war-and-peace.ts / seed-books.ts first.");
+    process.exit(1);
+  }
+
+  for (const doc of docs) {
+    try {
+      await indexDocument(doc.id, doc.name);
+    } catch (err) {
+      console.error(`Failed to index "${doc.name}" (id ${doc.id}):`, err);
+      process.exitCode = 1;
+    }
+  }
+
+  console.log("\nAll default documents processed.");
+  process.exit(process.exitCode ?? 0);
 }
 
 seed().catch((err) => {

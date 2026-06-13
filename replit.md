@@ -33,7 +33,8 @@ A full-stack RAG (Retrieval-Augmented Generation) chatbot demo built with React 
 | `server/chromadb.ts` | ChromaDB CloudClient: indexChunks, semanticSearch, deleteDocumentCollection, getCollectionCount |
 | `server/index.ts` | Express setup, session-ephemeral cleanup on startup (deletes non-default docs + ChromaDB collections) |
 | `server/seed-war-and-peace.ts` | Seed script: downloads full War and Peace from Project Gutenberg, parses 365 chapters, creates ~5,469 overlapping chunks in PostgreSQL |
-| `server/seed-chromadb.ts` | Seed script: indexes all War and Peace chunks from PostgreSQL into ChromaDB Cloud with OpenAI embeddings |
+| `server/seed-books.ts` | Generic, config-driven Gutenberg seed: a `BOOKS` manifest (url + heading regex + optional content-start regex + label formatter) drives one parser/chunker for the additional default books (Aesop, Andersen, Iliad, Macbeth). Idempotent (skips by name); `DRY_RUN=1`/`VERBOSE=1` preview parsing without DB writes |
+| `server/seed-chromadb.ts` | Seed script: indexes every default document's un-indexed chunks from PostgreSQL into ChromaDB Cloud with OpenAI embeddings (idempotent, resumes from collection count) |
 | `client/src/store.ts` | Zustand store: documents, messages, pipeline steps, token tracking, document source toggle |
 | `client/src/components/chat/ChatPanel.tsx` | Chat with real SSE streaming from `/api/chat` |
 | `client/src/components/chat/ControlsPanel.tsx` | Document management, PDF upload, source switching, grounding/voice/style selectors |
@@ -98,13 +99,30 @@ Hardening for public/anonymous exposure (e.g. shared on LinkedIn):
 - On document upload: chunks indexed async (non-blocking response)
 - On document delete: ChromaDB collection deleted
 
+## Default Library
+
+Five `isDefault=true` knowledge sources ship with the demo (all persist across restarts; all surface in the Source → Default dropdown):
+
+| Document | Gutenberg | Sections | Chunks | Section label example |
+|----------|-----------|----------|--------|-----------------------|
+| War and Peace — Leo Tolstoy | #2600 | 365 chapters | ~5,469 | `BOOK ONE: 1805 — Ch. I` |
+| Aesop's Fables — G. F. Townsend | #21 | 312 fables | 378 | `The Hare and the Tortoise` |
+| Hans Christian Andersen's Fairy Tales | #1597 | 18 tales | 475 | `The Emperor's New Clothes` |
+| The Iliad — Homer (Samuel Butler) | #2199 | 24 books | 1,352 | `Book I` |
+| Macbeth — William Shakespeare | #1533 | 28 scenes | 164 | `ACT I — SCENE I. An open Place` |
+
+War and Peace keeps its dedicated `seed-war-and-peace.ts` (already seeded; left untouched to avoid regressions). The other four are produced by the generic `seed-books.ts` pipeline.
+
 ## Chunking Strategy
 
-War and Peace is chunked per-chapter with overlapping, equitably-sized chunks:
-- ~800 chars per chunk, ~100 char overlap
-- Sentence-boundary aware (splits on `.!?;`)
-- Each chunk tagged with source label: `"BOOK X — Ch. Y"`
-- 365 chapters → 5,469 chunks
+All books share one chunker: ~800 chars per chunk, ~100 char overlap, sentence-boundary aware (splits on `.!?;`). Each chunk is tagged with a section-source label.
+
+The generic `seed-books.ts` parser:
+- Strips Gutenberg `*** START/END OF … ***` markers via a generic regex and normalizes CRLF.
+- Detects section headings per-book via a `headingRegex` applied to the **raw** line (leading-whitespace table-of-contents entries are thereby excluded) and requires the heading line to be blank-surrounded.
+- Discards text before the first heading (front matter / preface).
+- Treats a heading with no body (e.g. `ACT I`) as a **persistent prefix** for the sections that follow (yields `ACT I — SCENE I. …`).
+- Falls back to fixed-size blocks labelled `Section N` if fewer than 2 headings are detected.
 
 ## Design
 
